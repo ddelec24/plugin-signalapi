@@ -1,0 +1,16 @@
+version: "3"
+services:
+  signal:
+    image: bbernhard/signal-cli-rest-api:0.62
+    container_name: signal
+    privileged: true
+    environment:
+      - MODE=#mode# # supported modes: json-rpc, native, normal
+      - SIGNAL_CLI_UID=#userid#
+      - SIGNAL_CLI_GID=#groupid#
+    ports:
+#ports# #map docker port 8080 to host port 8080.
+    volumes:
+      - "#jeedom_path#/data/signal-cli-config:/home/.local/share/signal-cli"
+      - "#jeedom_path#/data/entrypoint.sh:/entrypoint.sh"
+      # map "signal-cli-config" folder on host system into docker container. the folder contains the password and cryptographic keys when a new number is registered
