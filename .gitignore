@@ -12,5 +12,6 @@ docs/Gemfile.lock
 docs/.sass-cache/
 .remote-sync.json
 .vscode
-!data/signal-cli-config/.gitkeep
 data/signal-cli-config/**
+!data/signal-cli-config/.gitkeep
+
