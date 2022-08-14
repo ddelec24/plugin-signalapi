@@ -1,4 +1,10 @@
 {
+  "apt":{
+    "nodejs" : {}
+  },
+  "npm" : {
+    "plugins/signal/resources/demond"  : {}
+  }
   "plugin" : {
     "docker2" : {}
   },

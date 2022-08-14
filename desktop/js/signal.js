@@ -101,7 +101,7 @@ function isValidNumber(p) {
 
 function printEqLogic(_eqLogic) {
   let eqLogic = _eqLogic.id;
-  let colorCheck = paramsSignal[eqLogic]['colorCheck'];
+  let colorCheck = (paramsSignal[eqLogic] !== undefined) ? paramsSignal[eqLogic]['colorCheck'] : 'red';
   $('.checkNumberLinked').attr('style', "color: " + colorCheck + " !important");
   //$('#namePteroServ').html(infosPteroServ[eqLogic]['nomnode']);
 }

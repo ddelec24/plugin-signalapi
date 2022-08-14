@@ -21,100 +21,75 @@ require_once __DIR__  . '/../../../../core/php/core.inc.php';
 class signal extends eqLogic {
   /*     * *************************Attributs****************************** */
 
-  /*public static function dependancy_install() {
-  	log::add('signal', 'debug', 'install');
-  }
-  
-  public static function dependancy_end() {
-    log::add('signal', 'debug', 'dependancy end');
-    $docker = self::byLogicalId('1::signal', 'docker2'); // vérif si le docker signal existe ou non
-    if (is_object($docker))
-      return;
-	
-    log::add('signal', 'debug', 'dependancy end2');
-    self::installSignalDocker();
-  }
-
- 	public static function dependancy_info() {
-     $return = array();
-     $return['state'] = 'nok';
-     return $return;
-    }*/
-  
-  /*
-  * Permet de définir les possibilités de personnalisation du widget (en cas d'utilisation de la fonction 'toHtml' par exemple)
-  * Tableau multidimensionnel - exemple: array('custom' => true, 'custom::layout' => false)
-  public static $_widgetPossibility = array();
-  */
-
-  /*
-  * Permet de crypter/décrypter automatiquement des champs de configuration du plugin
-  * Exemple : "param1" & "param2" seront cryptés mais pas "param3"
-  public static $_encryptConfigKey = array('param1', 'param2');
-  */
-
-  /*     * ***********************Methode static*************************** */
-
-  /*
-  * Fonction exécutée automatiquement toutes les minutes par Jeedom
-  public static function cron() {}
-  */
-
-  /*
-  * Fonction exécutée automatiquement toutes les 5 minutes par Jeedom
-  public static function cron5() {}
-  */
-
-  /*
-  * Fonction exécutée automatiquement toutes les 10 minutes par Jeedom
-  public static function cron10() {}
-  */
-
-  /*
-  * Fonction exécutée automatiquement toutes les 15 minutes par Jeedom
-  public static function cron15() {}
-  */
-
-  /*
-  * Fonction exécutée automatiquement toutes les 30 minutes par Jeedom
-  public static function cron30() {}
-  */
-
-  /*
-  * Fonction exécutée automatiquement toutes les heures par Jeedom
-  public static function cronHourly() {}
-  */
-
-  /*
-  * Fonction exécutée automatiquement tous les jours par Jeedom
-  public static function cronDaily() {}
-  */
-
   /*     * *********************Méthodes d'instance************************* */
 
-  // Fonction exécutée automatiquement avant la création de l'équipement
-  public function preInsert() {
-  }
+   public static function deamon_info() {
+      $return = array();
+      $return['log'] = __CLASS__;
+      $return['state'] = 'nok';
+      $pid_file = jeedom::getTmpFolder(__CLASS__) . '/deamon.pid';
+      if (file_exists($pid_file)) {
+         if (@posix_getsid(trim(file_get_contents($pid_file)))) {
+            $return['state'] = 'ok';
+         } else {
+            shell_exec(system::getCmdSudo() . 'rm -rf ' . $pid_file . ' 2>&1 > /dev/null');
+         }
+      }
+      $return['launchable'] = 'ok';
+      return $return;
+   }
 
-  // Fonction exécutée automatiquement après la création de l'équipement
-  public function postInsert() {
-  }
+   public static function deamon_start() {
+      log::remove(__CLASS__ . '_update');
+      self::deamon_stop();
+      $deamon_info = self::deamon_info();
+      if ($deamon_info['launchable'] != 'ok') {
+         throw new Exception(__('Veuillez vérifier la configuration', __FILE__));
+      }
 
-  // Fonction exécutée automatiquement avant la mise à jour de l'équipement
-  public function preUpdate() {
-  }
+      $signal_path = realpath(dirname(__FILE__) . '/../../resources/demond');
+      chdir($signal_path);
+     
+      $cmd = system::getCmdSudo() . ' /usr/bin/node ' . $signal_path . '/signald.js';
+      $cmd .= ' --loglevel ' . log::convertLogLevel(log::getLogLevel(__CLASS__));
+      $cmd .= ' --socketport ' . config::byKey('socketport', __CLASS__);
+      $cmd .= ' --signal_server 127.0.0.1:' . config::byKey('port', __CLASS__) . '/v1/receive/+33627238828';
+      $cmd .= ' --callback ' . network::getNetworkAccess('internal', 'proto:127.0.0.1:port:comp') . '/plugins/signal/core/php/jeeSignal.php';
+      $cmd .= ' --apikey ' . jeedom::getApiKey(__CLASS__);
+      $cmd .= ' --cycle ' . config::byKey('cycle', __CLASS__);
+      $cmd .= ' --pid ' . jeedom::getTmpFolder(__CLASS__) . '/deamon.pid';
+      log::add(__CLASS__, 'info', 'Lancement démon signal : ' . $cmd);
+      exec($cmd . ' >> ' . log::getPathToLog('signal') . ' 2>&1 &');
+      $i = 0;
+      while ($i < 10) {
+         $deamon_info = self::deamon_info();
+         if ($deamon_info['state'] == 'ok') {
+            break;
+         }
+         sleep(1);
+         $i++;
+      }
+      if ($i >= 30) {
+         log::add(__CLASS__, 'error', 'Impossible de lancer le démon signal, vérifiez le log', 'unableStartDeamon');
+         return false;
+      }
+      message::removeAll(__CLASS__, 'unableStartDeamon');
+      return true;
+   }
 
-  // Fonction exécutée automatiquement après la mise à jour de l'équipement
-  public function postUpdate() {
-  }
-
-  // Fonction exécutée automatiquement avant la sauvegarde (création ou mise à jour) de l'équipement
-  public function preSave() {
-  }
+   public static function deamon_stop() {
+      $pid_file = jeedom::getTmpFolder(__CLASS__) . '/deamon.pid';
+      if (file_exists($pid_file)) {
+         $pid = intval(trim(file_get_contents($pid_file)));
+         system::kill($pid);
+      }
+      system::kill('signald.js');
+      system::fuserk(config::byKey('socketport', __CLASS__));
+   }
 
   // Fonction exécutée automatiquement après la sauvegarde (création ou mise à jour) de l'équipement
   public function postSave() {
-		// Commande d'historisation des messages reçus (format brut json)
+		// Commande d'historisation des messages reçus (juste le message et brut json)
 		$info = $this->getCmd(null, 'received');
 		if (!is_object($info)) {
 			$info = new signalCmd();
@@ -125,18 +100,34 @@ class signal extends eqLogic {
 		$info->setEqLogic_id($this->getId());
 		$info->setType('info');
 		$info->setSubType('string');
+		$info->setIsVisible(1);
+		$info->setIsHistorized(1);
+    	$info->setDisplay('forceReturnLineAfter', true);
+    	$info->setConfiguration("historyPurge", "-3 months");
+		$info->save();
+    
+		$info = $this->getCmd(null, 'receivedRaw');
+		if (!is_object($info)) {
+			$info = new signalCmd();
+			$info->setName(__('Message brut reçu', __FILE__));
+		}
+		$info->setOrder(2);
+		$info->setLogicalId('receivedRaw');
+		$info->setEqLogic_id($this->getId());
+		$info->setType('info');
+		$info->setSubType('string');
 		$info->setIsVisible(0);
 		$info->setIsHistorized(1);
     	$info->setConfiguration("historyPurge", "-3 months");
 		$info->save();
-    	
+    
 		// envoi message
 		$cmd = $this->getCmd(null, 'sendMessage');
 		if (!is_object($cmd)) {
 			$cmd = new signalCmd();
 			$cmd->setName(__('Envoi message', __FILE__));
 		}
-		$cmd->setOrder(2);
+		$cmd->setOrder(3);
 		$cmd->setLogicalId('sendMessage');
 		$cmd->setEqLogic_id($this->getId());
 		$cmd->setType('action');
@@ -155,7 +146,7 @@ class signal extends eqLogic {
 			$cmd = new signalCmd();
 			$cmd->setName(__('Envoi de fichier', __FILE__));
 		}
-		$cmd->setOrder(3);
+		$cmd->setOrder(4);
 		$cmd->setLogicalId('sendFile');
 		$cmd->setEqLogic_id($this->getId());
 		$cmd->setType('action');

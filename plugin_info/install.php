@@ -19,20 +19,30 @@ require_once dirname(__FILE__) . '/../../../core/php/core.inc.php';
 
 // Fonction exécutée automatiquement après l'installation du plugin
 function signal_install() {
-  $port = config::byKey('port', 'signal');
-  if($port < 1024 || $port > 65535) {
-  	config::save('port', 8099, 'signal');
-  }
+	checkDefaults();
 }
 
 // Fonction exécutée automatiquement après la mise à jour du plugin
 function signal_update() {
-  $port = config::byKey('port', 'signal');
-  if($port < 1024 || $port > 65535) {
-  	config::save('port', 8089, 'signal');
-  }
+  checkDefaults();
 }
 
 // Fonction exécutée automatiquement après la suppression du plugin
 function signal_remove() {
+  // @TODO docker->rm() + supprimer deamon?
+}
+
+function checkDefaults() {
+  $port = config::byKey('port', 'signal');
+  if(!$port) {
+  	config::save('port', 8099, 'signal');
+  }
+  $socketport = config::byKey('port', 'signal');
+  if(!$socketport) {
+  	config::save('socketport', 55099, 'signal');
+  }
+  $cycle = config::byKey('cycle', 'signal');
+  if(!$cycle) {
+  	config::save('cycle', 0.3, 'signal');
+  }
 }

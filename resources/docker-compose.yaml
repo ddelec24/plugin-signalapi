@@ -11,6 +11,8 @@ services:
     ports:
 #ports# #map docker port 8080 to host port 8080.
     volumes:
+      - "/etc/timezone:/etc/timezone:ro"
+      - "/etc/localtime:/etc/localtime:ro"
       - "#jeedom_path#/data/signal-cli-config:/home/.local/share/signal-cli"
       - "#jeedom_path#/data/entrypoint.sh:/entrypoint.sh"
       # map "signal-cli-config" folder on host system into docker container. the folder contains the password and cryptographic keys when a new number is registered

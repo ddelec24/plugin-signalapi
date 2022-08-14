@@ -28,8 +28,7 @@ if(strlen($content) > 50) { // si on a bien des données
   foreach($eqLogics as $eqLogic) {
 	  $currentNumber = $eqLogic->getConfiguration(null, 'numero');
       $currentNumber = $currentNumber['numero'];
-    	
-	  $params[$eqLogic->getId()]['colorCheck'] = "red";
+      $params[$eqLogic->getId()]['colorCheck'] = "red";
       foreach($content->accounts as $account) {
           if($account->number == $currentNumber)
               $params[$eqLogic->getId()]['colorCheck'] = "green";
@@ -169,12 +168,13 @@ sendVarToJS('paramsSignal', $params);
 							</div>
                             <?php
                             if($displayLink) {
+                            	$server = $_SERVER['SERVER_NAME'];
                             	echo '<div class="form-group">';
 								echo '<label class="col-sm-4 control-label">{{QRcode pour lier votre appareil}}';
 								echo '<sup><i class="fas fa-question-circle tooltips" title="{{Voir documentation, il faut scanner un QRcode depuis votre téléphone}}"></i></sup>';
 								echo '</label>';
 								echo '<div class="col-sm-6">';
-								echo '<a href="http://localhost:'. (($portSignal == "") ? 8099 : $portSignal) .'/v1/qrcodelink?device_name=signal-api'. ($eqLogic->getId()).'" target="_blank"> Associer mon téléphone avec l\'Api</a> ';
+								echo '<a href="http://' . $server . ':' .  (($portSignal == "") ? 8099 : $portSignal) .'/v1/qrcodelink?device_name=signal-api'. ($eqLogic->getId()).'" target="_blank"> Associer mon téléphone avec l\'Api</a> ';
 								echo '&nbsp; <i class="fas fa-lg fa-check-circle checkNumberLinked" style=" color: grey"></i>';
 								echo '</div>';
                             	echo '</div>';

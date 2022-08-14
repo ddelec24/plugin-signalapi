@@ -1,0 +1,13 @@
+{
+    "name": "signal",
+    "version": "1.0.0",
+    "description": "Jeedom signal",
+    "main": "index.js",
+    "dependencies": {
+        "express": "^4.17.1",
+        "fs": "0.0.1-security",
+        "request": "^2.81.0",
+        "websocket": "^1.0.34",
+        "ws": "^8.8.1"
+    }
+}

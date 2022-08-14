@@ -42,10 +42,25 @@ if(is_object($dockerContainer)) {
 
   <form class="form-horizontal">
   <fieldset>
-
+    <div class="form-group">
+      <label class="col-md-4 control-label">{{Port socket interne}}
+		<sup><i class="fas fa-question-circle tooltips" title="{{Ne changez que si vous avez des difficultés (port déjà utilisé, accès refusé...), 55099 par défaut}}"></i></sup>
+  	  </label>
+      <div class="col-md-4">
+      	<input class="configKey form-control" data-l1key="socketport">
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="col-md-4 control-label">{{Cycle (s)}}
+	  	<sup><i class="fas fa-question-circle tooltips" title="{{0.3 par défaut. Ne touchez que si nécessaire.}}"></i></sup>
+	  </label>
+      <div class="col-md-4">
+      	<input class="configKey form-control" data-l1key="cycle">
+      </div>
+    </div>
     <div class="form-group">
       <label class="col-md-4 control-label">{{Port utilisé pour le docker}}
-        <sup><i class="fas fa-question-circle tooltips" title="{{Ne changez que si vous avez des difficultés (port déjà utilisé, accès refusé...), 8089 par défaut}}"></i></sup>
+        <sup><i class="fas fa-question-circle tooltips" title="{{Ne changez que si vous avez des difficultés (port déjà utilisé, accès refusé...), 8099 par défaut}}"></i></sup>
       </label>
       <div class="col-md-4">
         <input class="configKey form-control" data-l1key="port" type="number" step="1" min="1024" max="65535" />
@@ -63,9 +78,7 @@ if(is_object($dockerContainer)) {
         echo '<input type="checkbox" class="configKey form-control" data-l1key="jsonrpc" />';
       echo '</div>';
     echo '</div>';
-	} else {
-    	echo "toto";
-    }
+	}
 	?>
 
 	
