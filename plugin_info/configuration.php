@@ -25,7 +25,8 @@ if (!isConnect()) {
 // Vérifie si le container a déjà enregistré un numéro et donc autoriser le passage en json-rpc
 $fileAccounts = realpath(__DIR__ . '/../')  . '/data/signal-cli-config/data/accounts.json';
 $displayJsonRpc = false;
-if(trim(shell_exec( 'sudo [ -f "' . $fileAccounts . '" ] && echo "ok"' )) == "ok") // @TODO si stabilité ok avec nouvel entrypoint, faire un php file_exists directement
+//if(trim(shell_exec( 'sudo [ -f "' . $fileAccounts . '" ] && echo "ok"' )) == "ok") // @TODO si stabilité ok avec nouvel entrypoint, faire un php file_exists directement
+if(file_exists($fileAccounts))
   $displayJsonRpc = true;
 
 // Vérifie si docker signal actif
@@ -72,7 +73,7 @@ if(is_object($dockerContainer)) {
     if($displayJsonRpc) {
     echo '<div class="form-group">';
       echo '<label class="col-md-4 control-label">{{Réception des messages}}';
-		echo '<sup><i class="fas fa-question-circle tooltips" title="{{Permettre la réception en temps réel des messages (consomme plus de ressources).<br /> Après changement, sauvegardez la configuration et appuyez de nouveau sur installation du docker.}}"></i></sup>';
+		echo '<sup><i class="fas fa-question-circle tooltips" title="{{Permettre la réception en temps réel des messages (consomme plus de ressources).<br /> Après changement, sauvegardez la configuration et appuyez de nouveau sur Installation/Réinstallation du service.}}"></i></sup>';
   	  echo '</label>';
       echo '<div class="col-md-7">';
         echo '<input type="checkbox" class="configKey form-control" data-l1key="jsonrpc" />';

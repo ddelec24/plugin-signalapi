@@ -148,6 +148,7 @@ class signal extends eqLogic {
 		}
 		$cmd->setOrder(4);
 		$cmd->setLogicalId('sendFile');
+    	$cmd->setConfiguration('type', 'sendWithAttachements');
 		$cmd->setEqLogic_id($this->getId());
 		$cmd->setType('action');
 		//$cmd->setTemplate('dashboard', 'sendFile'); //template pour le dashboard
@@ -217,8 +218,48 @@ class signal extends eqLogic {
   }
   
   public function sendFile($options) {
-    if (isset($_options['files']) && is_array($_options['files'])) {
-      log::add('signal', 'debug', 'Envoi de fichier demandé');
+    $port = config::byKey('port', 'signal');
+    
+    log::add('signal', 'debug', 'Envoi de fichier demandé');
+    log::add('signal', 'debug', json_encode($options));
+    
+    //file = passage par scenario/lien
+	if ((isset($options['file'])) && ($options['file'] == ""))
+      $options['file'] = 'error';
+	if (!(isset($options['file'])))
+      $options['file'] = "";
+
+    // files = passage par scenario/commande
+    if (isset($options['files']) && is_array($options['files'])) {
+      foreach ($options['files'] as $file) { // @TODO améliorer la gestion multi files
+        if (version_compare(phpversion(), '5.5.0', '>=')) {
+          $attachement = $file;
+          $files = new CurlFile($file);
+          $nameexplode = explode('.',$files->getFilename());
+          log::add('discordlink', 'debug', $options['title'].' taille : '.$nameexplode[sizeof($nameexplode)-1]);
+          $message = (isset($options['message']) ? $options['message'].'.'.$nameexplode[sizeof($nameexplode)-1] : $files->getFilename());
+        }
+      }
+      $message = $options['message'];
+
+    } else {
+      $attachement = $options['file'];
+      $message = $options['message'];
+    }
+    
+    $b64file = base64_encode(@file_get_contents($attachement));
+    //log::add('signal', 'debug', "message : " .$message . '<br/>' . "pjb64 : " . $b64file);
+
+    $expediteur = "+33627238828";
+    $destinataires = '"+33627238828"';
+    $curl = 'echo \'{"message": "' . $message . '", "base64_attachments": ["' . $b64file . '"], "number": "' . $expediteur . '", "recipients": [' . $destinataires .
+      		']}\' | curl -X POST -H "Content-Type: application/json" -d @- \'http://localhost:' . $port . '/v2/send\'';
+    
+    log::add('signal', 'debug', '[ENVOI MESSAGE] Requête:<br/>' . $curl);
+    $send = shell_exec($curl);
+    log::add('signal', 'debug', '[RETOUR MESSAGE] ' . $send);
+  }
+  
         /*
     TMPFILE="$(base64 image_9.jpg)" curl -X POST -H "Content-Type: application/json" -d '{"message": "Test image", "base64_attachments": ["'"${TMPFILE}"'"], "number": "+431212131491291", "
     recipients": ["+4354546464654"]}' 'http://127.0.0.1:8080/v2/send'
@@ -228,10 +269,7 @@ class signal extends eqLogic {
 	TMPFILE="$(base64 video.mp4)" echo '{"message": "Test video", "base64_attachments": ["'"$TMPFILE"'"], "number": "+431212131491291", "recipients": ["+4354546464654"]}' | curl -X POST -H 
     "Content-Type: application/json" -d @- 'http://127.0.0.1:8080/v2/send'
  */
-    } else {
-      log::add('signal', 'debug', 'Pas de fichier trouvé');
-    }
-  }
+  
    // @TODO QUAND PJ => split SI > 4Mb   ou non
 
 }
@@ -276,41 +314,21 @@ class signalCmd extends cmd {
 			log::add('signal', 'warn', 'Error while executing cmd ' . $this->getLogicalId());
 			break;
 		}
-    
+ }
+  
 
-    
-/* réception msg websocket */
-    /*
-{
-    "envelope":
-    {
-        "source": "+33627238828",
-        "sourceNumber": "+33627238828",
-        "sourceUuid": "6be5b6a8-5ff1-4822-b557-8b318e229b0a",
-        "sourceName": "Damien D.",
-        "sourceDevice": 1,
-        "timestamp": 1660228216341,
-        "syncMessage":
-        {
-            "sentMessage":
-            {
-                "destination": "+33627238828",
-                "destinationNumber": "+33627238828",
-                "destinationUuid": "6be5b6a8-5ff1-4822-b557-8b318e229b0a",
-                "timestamp": 1660228216341,
-                "message": "Réception Message ok",
-                "expiresInSeconds": 0,
-                "viewOnce": false
-            }
-        }
-    },
-    "account": "+33627238828",
-    "subscription": 0
-}
-    */
-    
+  public function getWidgetTemplateCode($_version = 'dashboard', $_clean = true, $_widgetName = '') {
+    $data = null;
+    if ($_version != 'scenario') return parent::getWidgetTemplateCode($_version, $_clean, $_widgetName);
+    if ($this->getConfiguration('type') == 'sendWithAttachements')
+      $data = getTemplate('core', 'scenario', 'cmd.sendWithAttachements', 'signal');
+    if (!is_null($data)) {
+      if (version_compare(jeedom::version(),'4.2.0','>=')) {
+        if(!is_array($data)) return array('template' => $data, 'isCoreWidget' => false);
+      } else return $data;
+    }
+    return parent::getWidgetTemplateCode($_version, $_clean, $_widgetName);
   }
-
   /*     * **********************Getteur Setteur*************************** */
 
 }
