@@ -4,7 +4,7 @@
     style="resize:vertical;" data-cmd_id="#id#" data-uid="#uid#">#file#</textarea>
   <span class="input-group-btn">
     <button class="btn btn-default listEquipementInfo roundedRight" type="button" title="{{Sélectionner la commande}}"
-      data-cmd_id="#id#" data-uid="#uid#"><i class="fas fa-list-alt"></i></button>
+      data-cmd_id="#id#" data-uid="#uid#" data-btnfor="file"><i class="fas fa-list-alt"></i></button>
   </span>
 </div>
 
@@ -14,12 +14,21 @@
     style="resize:vertical;" data-cmd_id="#id#" data-uid="#uid#">#message#</textarea>
   <span class="input-group-btn">
     <button class="btn btn-default listEquipementInfo roundedRight" type="button" title="{{Sélectionner la commande}}"
-      data-cmd_id="#id#" data-uid="#uid#"><i class="fas fa-list-alt"></i></button>
+      data-cmd_id="#id#" data-uid="#uid#" data-btnfor="message"><i class="fas fa-list-alt"></i></button>
   </span>
 </div>
 
+<div class="input-group input-group-sm" style="width: 100%">
+	<span class="input-group-addon roundedLeft" style="width: 100px">Destinataire</span>
+          <select style="width: 300px; height: 35px" class="form-control expressionAttr ta_autosize" rows="1" data-l1key="options" data-l2key="number" data-cmd_id="#id#" data-uid="#uid#">#possibleNumbers#</select>
+</div>
+
 <script>
+  $('.expressionAttr[data-l1key=options][data-l2key=number][data-uid=#uid#]').val("#number#").change(); // on sélectionne le numéro enregistré
+  
+  
   $('.listEquipementInfo[data-uid=#uid#]').on('click', function () {
+    var l2key = $(this).attr('data-btnfor');
     if ('#message_cmd_subtype#' != '') {
       jeedom.cmd.getSelectModal({
         cmd: {
@@ -27,7 +36,8 @@
           subType: '#message_cmd_subtype#'
         }
       }, function (result) {
-        $('.expressionAttr[data-l1key=options][data-l2key=message][data-uid=#uid#]').atCaret('insert', result
+        
+        $('.expressionAttr[data-l1key=options][data-l2key='+l2key+'][data-uid=#uid#]').atCaret('insert', result
           .human);
       });
     } else {
@@ -36,7 +46,7 @@
           type: '#message_cmd_type#'
         }
       }, function (result) {
-        $('.expressionAttr[data-l1key=options][data-l2key=message][data-uid=#uid#]').atCaret('insert', result
+        $('.expressionAttr[data-l1key=options][data-l2key='+l2key+'][data-uid=#uid#]').atCaret('insert', result
           .human);
       });
     }
