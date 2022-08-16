@@ -125,7 +125,7 @@ class signal extends eqLogic {
 		$info->setIsVisible(1);
 		$info->setIsHistorized(1);
 		$info->setDisplay('forceReturnLineAfter', true);
-		$info->setConfiguration("historyPurge", "-3 months");
+		$info->setConfiguration("historyPurge", "-3 month");
 		$info->save();
 		
 		$info = $this->getCmd(null, 'receivedRaw');
@@ -140,7 +140,7 @@ class signal extends eqLogic {
 		$info->setSubType('string');
 		$info->setIsVisible(0);
 		$info->setIsHistorized(1);
-		$info->setConfiguration("historyPurge", "-3 months");
+		$info->setConfiguration("historyPurge", "-3 month");
 		$info->save();
 		
 		// envoi message
@@ -252,7 +252,7 @@ class signal extends eqLogic {
 
         $attachement = $options['file'];
         $message = $options['message'];
-
+      
       	if($attachement == 'error') { // quand on passe une commande et qu'elle est en erreur
 			log::add('signal', 'warning', "Erreur sur la commande utilisée pour envoyer un fichier.");
           	return;
@@ -260,7 +260,8 @@ class signal extends eqLogic {
       
       
 		$tmpFolder = jeedom::getTmpFolder('signal');
-		$filename = basename($attachement);
+      	// si c'est une url il faut pas récupérer les éventuels arguments pour le nom du fichier
+		$filename = (substr($attachement, 0, 4) == 'http') ? basename(parse_url($attachement)['path']) : basename($attachement); 
 		$contentFile = @file_get_contents($attachement);
       
       	if(!$contentFile || strlen($contentFile) == 0) {
@@ -269,12 +270,10 @@ class signal extends eqLogic {
         }
 
       	$writeFile = file_put_contents($tmpFolder . "/" . $filename, $contentFile);
-      
 		log::add('signal', 'debug', 'écriture fichier '. $tmpFolder. "/" . $filename . " => " . round($writeFile/1024/1024, 2) . 'Mo');
+      	// nettoyage des caractères qui passent mal
 		$cleanedMessage = str_replace('"', '\"', $message);
 		$cleanedMessage = str_replace("'", "’", $cleanedMessage);
-		//$cleanedMessage = addslashes($message);
-
 
 		$sender = trim($this->getConfiguration("numero"));
 		$recipient = isset($options['number']) ? trim($options['number']) : $sender;
