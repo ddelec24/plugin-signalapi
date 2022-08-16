@@ -251,28 +251,22 @@ class signal extends eqLogic {
 		if (!(isset($options['file'])))
 			$options['file'] = "";
 
-		// files = passage par scenario/commande
-		if (isset($options['files']) && is_array($options['files'])) {
-			foreach ($options['files'] as $file) { // @TODO améliorer la gestion multi files
-				if (version_compare(phpversion(), '5.5.0', '>=')) {
-					$attachement = $file;
-					$files = new CurlFile($file);
-					$nameexplode = explode('.',$files->getFilename());
-					log::add('signal', 'debug', $options['title'].' taille : '.$nameexplode[sizeof($nameexplode)-1]);
-					$message = (isset($options['message']) ? $options['message'].'.'.$nameexplode[sizeof($nameexplode)-1] : $files->getFilename());
-				}
-			}
-			$message = $options['message'];
-
-		} else {
-			$attachement = $options['file'];
-			$message = $options['message'];
-		}
+        $attachement = $options['file'];
+        $message = $options['message'];
 		
 		$tmpFolder = jeedom::getTmpFolder('signal');
 		$filename = basename($attachement);
+      
 		$contentFile = @file_get_contents($attachement);
-		$writeFile = file_put_contents($tmpFolder . "/" . $filename, $contentFile);
+		//log::add('signal', 'debug', strlen($contentFile) . "type=" . gettype($contentFile));
+      	if(!$contentFile || strlen($contentFile) == 0) {
+			log::add('signal', 'warning', "Fichier téléchargé vide (" . $attachement . "). Pas d'envoi possible.");
+          	return;
+        } else {
+          	$writeFile = file_put_contents($tmpFolder . "/" . $filename, $contentFile);
+        }
+          
+      
 		log::add('signal', 'debug', 'écriture fichier '. $tmpFolder. "/" . $filename . " => " . round($writeFile/1024/1024, 2) . 'Mo');
 		$cleanedMessage = str_replace('"', '\"', $message);
 		$cleanedMessage = str_replace("'", "’", $cleanedMessage);
@@ -342,7 +336,7 @@ class signalCmd extends cmd {
 				break;
 				default:
 				throw new Error('This should not append!');
-				log::add('signal', 'warn', 'Error while executing cmd ' . $this->getLogicalId());
+				log::add('signal', 'warning', 'Error while executing cmd ' . $this->getLogicalId());
 				break;
 			}
 		}
