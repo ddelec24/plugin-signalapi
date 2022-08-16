@@ -245,7 +245,6 @@ class signal extends eqLogic {
 		log::add('signal', 'debug', "[sendFile Options] " . json_encode($options));
 		$port = config::byKey('port', 'signal');
 		
-		//file = passage par scenario/lien
 		if ((isset($options['file'])) && ($options['file'] == ""))
 			$options['file'] = 'error';
 		if (!(isset($options['file'])))
@@ -253,19 +252,23 @@ class signal extends eqLogic {
 
         $attachement = $options['file'];
         $message = $options['message'];
-		
+
+      	if($attachement == 'error') { // quand on passe une commande et qu'elle est en erreur
+			log::add('signal', 'warning', "Erreur sur la commande utilisée pour envoyer un fichier.");
+          	return;
+        }
+      
+      
 		$tmpFolder = jeedom::getTmpFolder('signal');
 		$filename = basename($attachement);
-      
 		$contentFile = @file_get_contents($attachement);
-		//log::add('signal', 'debug', strlen($contentFile) . "type=" . gettype($contentFile));
+      
       	if(!$contentFile || strlen($contentFile) == 0) {
 			log::add('signal', 'warning', "Fichier téléchargé vide (" . $attachement . "). Pas d'envoi possible.");
           	return;
-        } else {
-          	$writeFile = file_put_contents($tmpFolder . "/" . $filename, $contentFile);
         }
-          
+
+      	$writeFile = file_put_contents($tmpFolder . "/" . $filename, $contentFile);
       
 		log::add('signal', 'debug', 'écriture fichier '. $tmpFolder. "/" . $filename . " => " . round($writeFile/1024/1024, 2) . 'Mo');
 		$cleanedMessage = str_replace('"', '\"', $message);
