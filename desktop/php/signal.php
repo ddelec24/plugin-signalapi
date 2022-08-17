@@ -167,7 +167,7 @@ sendVarToJS('paramsSignal', $params);
 								</div>
 							</div>
                             <?php
-                            if($displayLink) {
+                            if($displayLink  && count($eqLogics) > 0) {
                             	$server = $_SERVER['SERVER_NAME'];
                             	echo '<div class="form-group">';
 								echo '<label class="col-sm-4 control-label">{{QRcode pour lier votre appareil}}';
