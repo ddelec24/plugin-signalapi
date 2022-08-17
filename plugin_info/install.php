@@ -37,7 +37,7 @@ function checkDefaults() {
   if(!$port) {
   	config::save('port', 8099, 'signal');
   }
-  $socketport = config::byKey('port', 'signal');
+  $socketport = config::byKey('socketport', 'signal');
   if(!$socketport) {
   	config::save('socketport', 55099, 'signal');
   }

@@ -19,6 +19,10 @@
 require_once __DIR__  . '/../../../../core/php/core.inc.php';
 
 class signal extends eqLogic {
+
+    public static function dependancy_end() {
+  		log::add('signal', 'info', 'dependancy end'); 
+  	}
 	/*     * *************************Attributs****************************** */
 	public static function templateWidget() {
 
