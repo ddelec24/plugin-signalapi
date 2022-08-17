@@ -105,8 +105,7 @@ function installSignalDocker() {
 
   $uid = shell_exec('sudo id -u www-data');
   $guid = shell_exec('sudo id -g www-data');
-  //$uid = 1000;
-  //$guid = 1000;
+
   // redonne le chmod executable à l'entrypoint
   $addX = shell_exec(system::getCmdSudo() . " chmod +x " . realpath(__DIR__ . '/../../') . "/data/entrypoint.sh");
   
@@ -122,7 +121,7 @@ function installSignalDocker() {
 
 
   $mode = trim(config::byKey('jsonrpc', 'signal'));
-  log::add('signal', 'debug', $mode);
+
   $compose = str_replace('#mode#', (($mode == 1) ? "json-rpc" : "normal"), $compose);
 
   $docker = eqLogic::byLogicalId('1::signal', 'docker2');

@@ -24,8 +24,9 @@ if (!isConnect()) {
 
 // Vérifie si le container a déjà enregistré un numéro et donc autoriser le passage en json-rpc
 $fileAccounts = realpath(__DIR__ . '/../')  . '/data/signal-cli-config/data/accounts.json';
+$eqLogics = eqLogic::byType('signal', true);
 $displayMoreOptions = false;
-if(file_exists($fileAccounts))
+if(file_exists($fileAccounts) && count($eqLogics) > 0)
   $displayMoreOptions = true;
 
 // Vérifie si docker signal actif
