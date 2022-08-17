@@ -103,10 +103,10 @@ function installSignalDocker() {
     include_file('core', 'docker2', 'class', 'docker2');
   }
 
-  //$uid = shell_exec('sudo id -u www-data');
-  //$guid = shell_exec('sudo id -g www-data');
-  $uid = 1000;
-  $guid = 1000;
+  $uid = shell_exec('sudo id -u www-data');
+  $guid = shell_exec('sudo id -g www-data');
+  //$uid = 1000;
+  //$guid = 1000;
   // redonne le chmod executable à l'entrypoint
   $addX = shell_exec(system::getCmdSudo() . " chmod +x " . realpath(__DIR__ . '/../../') . "/data/entrypoint.sh");
   

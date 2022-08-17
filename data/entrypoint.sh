@@ -5,16 +5,19 @@ set -e
 
 [ -z "${SIGNAL_CLI_CONFIG_DIR}" ] && echo "SIGNAL_CLI_CONFIG_DIR environmental variable needs to be set! Aborting!" && exit 1;
 
+# jeedom fix
+userdel www-data
+
 usermod -u ${SIGNAL_CLI_UID} signal-api
 groupmod -g ${SIGNAL_CLI_GID} signal-api
 
 
 # Fix permissions to ensure backward compatibility
-#chown ${SIGNAL_CLI_UID}:${SIGNAL_CLI_GID} -R ${SIGNAL_CLI_CONFIG_DIR}
+chown ${SIGNAL_CLI_UID}:${SIGNAL_CLI_GID} -R ${SIGNAL_CLI_CONFIG_DIR}
 
 # Commandes spéciales jeedom, car il remet les droits à www-data à chaque backup
-chown www-data:www-data -R ${SIGNAL_CLI_CONFIG_DIR}
-usermod -a -G www-data signal-api
+# chown www-data:www-data -R ${SIGNAL_CLI_CONFIG_DIR}
+# usermod -a -G www-data signal-api
 
 # Show warning on docker exec
 cat <<EOF >> /root/.bashrc
