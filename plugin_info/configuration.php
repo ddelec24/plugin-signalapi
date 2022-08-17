@@ -24,10 +24,9 @@ if (!isConnect()) {
 
 // Vérifie si le container a déjà enregistré un numéro et donc autoriser le passage en json-rpc
 $fileAccounts = realpath(__DIR__ . '/../')  . '/data/signal-cli-config/data/accounts.json';
-$displayJsonRpc = false;
-//if(trim(shell_exec( 'sudo [ -f "' . $fileAccounts . '" ] && echo "ok"' )) == "ok") // @TODO si stabilité ok avec nouvel entrypoint, faire un php file_exists directement
+$displayMoreOptions = false;
 if(file_exists($fileAccounts))
-  $displayJsonRpc = true;
+  $displayMoreOptions = true;
 
 // Vérifie si docker signal actif
 $dockerContainer = eqLogic::byLogicalId('1::signal', 'docker2');
@@ -67,20 +66,36 @@ if(is_object($dockerContainer)) {
         <input class="configKey form-control" data-l1key="port" type="number" step="1" min="1024" max="65535" />
       </div>
     </div>
-
-    <?php
-
-    if($displayJsonRpc) {
-    echo '<div class="form-group">';
-      echo '<label class="col-md-4 control-label">{{Réception des messages}}';
-		echo '<sup><i class="fas fa-question-circle tooltips" title="{{Permettre la réception en temps réel des messages (consomme plus de ressources).<br /> Après changement, sauvegardez la configuration et appuyez de nouveau sur Installation/Réinstallation du service.}}"></i></sup>';
-  	  echo '</label>';
-      echo '<div class="col-md-7">';
-        echo '<input type="checkbox" class="configKey form-control" data-l1key="jsonrpc" />';
-      echo '</div>';
-    echo '</div>';
-	}
-	?>
+	<hr />
+          
+    <?php 
+      if($displayMoreOptions) { 
+      	$eqLogics = eqLogic::byType('signal', true);
+        $listAvailableNumbers = "";
+        foreach($eqLogics as $eqLogic) {
+          $listAvailableNumbers .= '<option value="' . $eqLogic->getConfiguration('numero') . '">' . $eqLogic->getConfiguration('numero') . ' (' . $eqLogic->getName() . ')</option>' . PHP_EOL;
+        }
+      
+      ?>
+    <div class="form-group">
+      <label class="col-md-4 control-label">{{Réception des messages}}
+		<sup><i class="fas fa-question-circle tooltips" title="{{Permettre la réception en temps réel des messages (consomme plus de ressources).<br /> Après changement, sauvegardez la configuration et appuyez de nouveau sur Installation/Réinstallation du service.}}"></i></sup>
+  	  </label>
+      <div class="col-md-4">
+        <input type="checkbox" class="configKey form-control" data-l1key="jsonrpc" />
+      </div>
+    </div>
+    <div class="form-group displayListenNumber">
+      <label class="col-md-4 control-label">{{Numéro en écoute}}
+		<sup><i class="fas fa-question-circle tooltips" title="{{C'est le numéro qui sera utilisé pour récupérer les messages dans jeedom}}"></i></sup>
+  	  </label>
+      <div class="col-md-4">
+        <select class="configKey form-control" data-l1key="listenNumber">
+          <?=$listAvailableNumbers?>
+        </select>
+      </div>
+    </div>
+	<?php }	?>
 
 	
     <div class="form-group">
@@ -96,7 +111,19 @@ if(is_object($dockerContainer)) {
   </fieldset>
 </form>
           
-<script>   
+<script>
+   $('.configKey[data-l1key=jsonrpc]').on('change', function() {
+          
+        if($(this).is(':checked')) {
+          $('.displayListenNumber').show();
+          console.log("show");
+        } else {
+          $('.displayListenNumber').hide();
+          console.log("hide");
+        }
+		
+   });
+
    $('#btnInstallSignalDocker').off('click').on('click', function() {
     $.ajax({
       type: "POST",

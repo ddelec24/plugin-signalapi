@@ -11,24 +11,21 @@ if (isset($_GET['test'])) {
     echo 'OK';
     die();
 }
-/*
-if (!class_exists('signal')) {
-  include_file('core', 'signal', 'class', 'signal');
-}*/
 
 $eqLogics = eqLogic::byType('signal');
 
 $result = json_decode(file_get_contents("php://input"));
-log::add('signal', 'debug', "reçu par jeeSignal: " . json_encode($result->received));
 
-$sourceNumber = $result->received->envelope->sourceNumber;
-$name = $result->received->envelope->sourceName;
-$msg = $result->received->envelope->syncMessage->sentMessage->message;
-$recipientNumber = $result->received->envelope->syncMessage->sentMessage->destinationNumber;
+if(isset($result->received)) // on log en debug que les infos de messages reçus
+	log::add('signal', 'debug', "reçu par jeeSignal: " . json_encode($result->received));
+
+$sourceNumber = 	$result->received->envelope->sourceNumber;
+$name = 			$result->received->envelope->sourceName;
+$msg = 				$result->received->envelope->syncMessage->sentMessage->message;
+$recipientNumber = 	$result->received->envelope->syncMessage->sentMessage->destinationNumber;
 
 foreach($eqLogics as $eqLogic) {
   	$eqNumero = $eqLogic->getConfiguration(null, 'numero');
-  	//log::add('signal', 'debug', "comparaison numero $recipientNumber et " . $eqNumero['numero']);
 	if($eqNumero['numero'] == $recipientNumber) { // si on est sur le numéro destinataire on historique le message
     	$eqLogic->checkAndUpdateCmd("received", $msg);
       	$eqLogic->checkAndUpdateCmd("receivedRaw", json_encode($result->received));

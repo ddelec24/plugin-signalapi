@@ -124,13 +124,8 @@ function installSignalDocker() {
   log::add('signal', 'debug', $mode);
   $compose = str_replace('#mode#', (($mode == 1) ? "json-rpc" : "normal"), $compose);
 
-  if (!class_exists('docker2')) {
-    include_file('core', 'docker2', 'class', 'docker2');
-  }
   $docker = eqLogic::byLogicalId('1::signal', 'docker2');
-  if (!is_object($docker)) {
-    $docker = new docker2();
-  }
+
   $docker->setLogicalId('1::signal');
   $docker->setName('signal');
   $docker->setIsEnable(1);

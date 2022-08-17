@@ -20,32 +20,7 @@ require_once __DIR__  . '/../../../../core/php/core.inc.php';
 
 class signal extends eqLogic {
 
-    public static function dependancy_end() {
-  		log::add('signal', 'info', 'dependancy end'); 
-  	}
 	/*     * *************************Attributs****************************** */
-	public static function templateWidget() {
-
-		$return['send'] =    array(
-			'template' => 'cmd.send',
-			'replace' => array("#_desktop_width_#" => "100",
-								"#_mobile_width_#" => "50",
-								"#title_disable#" => "1",
-								"#message_disable#" => "0",
-								"#currentNumbers#" => "COCOOOO")
-		);
-
-		$return['sendWithAttachements'] =    array(
-			'template' => 'cmd.sendWithAttachements',
-			'replace' => array("#_desktop_width_#" => "100",
-								"#_mobile_width_#" => "50",
-								"#title_disable#" => "1",
-								"#message_disable#" => "0",
-								"#currentNumbers#" => "TITIIIIII")
-		);
-
-		return $return;
-	}
 	
 	/*     * *********************Méthodes d'instance************************* */
 
@@ -61,6 +36,15 @@ class signal extends eqLogic {
 				shell_exec(system::getCmdSudo() . 'rm -rf ' . $pid_file . ' 2>&1 > /dev/null');
 			}
 		}
+      
+      	// on peut pas démarrer le démon tant qu'on a pas un numéro enregistré dans la configuration
+      	$allEq = eqLogic::byType('signal', true);
+      	$listenNumber = config::byKey('listenNumber', __CLASS__);
+      	if(empty($listenNumber) || count($allEq) < 1) {
+      		$return['launchable'] = 'nok';
+          	return $return;
+        }
+      
 		$return['launchable'] = 'ok';
 		return $return;
 	}
@@ -76,16 +60,19 @@ class signal extends eqLogic {
 		$signal_path = realpath(dirname(__FILE__) . '/../../resources/demond');
 		chdir($signal_path);
 
+      	$listenNumber = config::byKey('listenNumber', __CLASS__);
+      
 		$cmd = system::getCmdSudo() . ' /usr/bin/node ' . $signal_path . '/signald.js';
 		$cmd .= ' --loglevel ' . log::convertLogLevel(log::getLogLevel(__CLASS__));
 		$cmd .= ' --socketport ' . config::byKey('socketport', __CLASS__);
-		$cmd .= ' --signal_server 127.0.0.1:' . config::byKey('port', __CLASS__) . '/v1/receive/+33627238828';
+		$cmd .= ' --signal_server 127.0.0.1:' . config::byKey('port', __CLASS__) . '/v1/receive/' . $listenNumber;
 		$cmd .= ' --callback ' . network::getNetworkAccess('internal', 'proto:127.0.0.1:port:comp') . '/plugins/signal/core/php/jeeSignal.php';
 		$cmd .= ' --apikey ' . jeedom::getApiKey(__CLASS__);
 		$cmd .= ' --cycle ' . config::byKey('cycle', __CLASS__);
 		$cmd .= ' --pid ' . jeedom::getTmpFolder(__CLASS__) . '/deamon.pid';
 		log::add(__CLASS__, 'info', 'Lancement démon signal : ' . $cmd);
 		exec($cmd . ' >> ' . log::getPathToLog('signal') . ' 2>&1 &');
+      
 		$i = 0;
 		while ($i < 10) {
 			$deamon_info = self::deamon_info();

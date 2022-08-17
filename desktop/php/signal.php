@@ -20,7 +20,7 @@ if(is_object($dockerContainer)) {
 // Fichier contenant les numéros validés et liés à signal Api
 $fileAccounts = realpath(__DIR__ . '/../../')  . '/data/signal-cli-config/data/accounts.json';
 $content = @file_get_contents($fileAccounts);
-log::add('signal', 'debug', "Contenu fichier accounts: <br/>---------------<br/>" . $content . "<br/>---------------");
+//log::add('signal', 'debug', "Contenu fichier accounts: <br/>---------------<br/>" . $content . "<br/>---------------");
 $params = [];
 
 if(strlen($content) > 50) { // si on a bien des données
