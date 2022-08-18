@@ -177,6 +177,13 @@ class signal extends eqLogic {
 
 	// Fonction exécutée automatiquement après la suppression de l'équipement
 	public function postRemove() {
+      // si on a plus aucun équipement, il faut absolument repasser en mode native et plus jsonrpc.
+      $allEq = eqLogic::byType('signal');
+      if(count($allEq) == 0) {
+      	config::save('jsonrpc', 0, 'signal');
+        log::add('signal', 'info', 'Vous venez de supprimer le dernier numéro, merci de relancer le service dans la page de configuration du plugin si vous aviez activé la reception des messages.');
+        message::add('signal', 'Vous venez de supprimer le dernier numéro, merci de relancer le service dans la page de configuration du plugin si vous aviez activé la reception des messages.');
+      }
 	}
 	
 	/*

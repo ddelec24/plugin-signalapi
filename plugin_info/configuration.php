@@ -71,7 +71,7 @@ if(is_object($dockerContainer)) {
           
     <?php 
       if($displayMoreOptions) { 
-      	$eqLogics = eqLogic::byType('signal', true);
+      	//$eqLogics = eqLogic::byType('signal', true);
         $listAvailableNumbers = "";
         foreach($eqLogics as $eqLogic) {
           $listAvailableNumbers .= '<option value="' . $eqLogic->getConfiguration('numero') . '">' . $eqLogic->getConfiguration('numero') . ' (' . $eqLogic->getName() . ')</option>' . PHP_EOL;
