@@ -37,10 +37,11 @@ class signal extends eqLogic {
 			}
 		}
       
-      	// on peut pas démarrer le démon tant qu'on a pas un numéro enregistré dans la configuration
+      	// on peut pas démarrer le démon tant qu'on a pas un numéro enregistré dans la configuration et que la réception n'est pas active
       	$allEq = eqLogic::byType('signal', true);
+      	$jsonrpcState = config::byKey('jsonrpc', __CLASS__);
       	$listenNumber = config::byKey('listenNumber', __CLASS__);
-      	if(empty($listenNumber) || count($allEq) < 1) {
+      	if(empty($listenNumber) || !$jsonrpcState || count($allEq) < 1) {
       		$return['launchable'] = 'nok';
           	return $return;
         }

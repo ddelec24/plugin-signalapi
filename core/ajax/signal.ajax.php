@@ -44,7 +44,7 @@ catch (Exception $e) {
 
 // install Docker Management
 function installDocker2() {
-  log::add('signal', 'debug', 'Verification de la présence de docker2');
+  //log::add('signal', 'debug', 'Verification de la présence de docker2');
   try {
     $plugin = plugin::byId('docker2');
     if (!$plugin->isActive()) {
@@ -103,12 +103,14 @@ function installSignalDocker() {
     include_file('core', 'docker2', 'class', 'docker2');
   }
 
+  // on va exécuter le container avec l'id de notre www-data, évite des problemes de droits
   $uid = shell_exec('sudo id -u www-data');
   $guid = shell_exec('sudo id -g www-data');
 
   // redonne le chmod executable à l'entrypoint
   $addX = shell_exec(system::getCmdSudo() . " chmod +x " . realpath(__DIR__ . '/../../') . "/data/entrypoint.sh");
   
+  // préparation du fichier docker compose
   $compose = file_get_contents(realpath(__DIR__ . '/../../') . '/resources/docker-compose.yaml');
   $compose = str_replace('#jeedom_path#', realpath(__DIR__ . '/../../'), $compose);
   

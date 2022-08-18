@@ -126,6 +126,7 @@ if(is_object($dockerContainer)) {
    });
 
    $('#btnInstallSignalDocker').off('click').on('click', function() {
+    jeedom.plugin.deamonStop({id: 'signal'});
     $.ajax({
       type: "POST",
       url: "plugins/signal/core/ajax/signal.ajax.php",
@@ -147,10 +148,12 @@ if(is_object($dockerContainer)) {
           window.toastr.clear()
           $('.pluginDisplayCard[data-plugin_id=' + $('#span_plugin_id').text() + ']').click()
           $('#div_alert').showAlert({
-            message: '{{Installation réussie}}',
+            message: '{{Mise en route réussie}}',
             level: 'success'
           });
-
+            
+          //if($('.configKey[data-l1key=jsonrpc]').is(':checked')) // on démarre le démon pour le mode jsonrpc
+          jeedom.plugin.deamonStart({id: 'signal'});
         }
       }
     });
