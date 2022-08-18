@@ -146,6 +146,7 @@ function installSignalDocker() {
   }
 
   $docker->create(); // on a toutes les infos, on démarre le container
+  sleep(5); // on attend un peu avant pour pas que le démon ne démarre avant le container
 
 
 }

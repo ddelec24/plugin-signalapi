@@ -117,10 +117,8 @@ if(is_object($dockerContainer)) {
           
         if($(this).is(':checked')) {
           $('.displayListenNumber').show();
-          console.log("show");
         } else {
           $('.displayListenNumber').hide();
-          console.log("hide");
         }
 		
    });
@@ -151,8 +149,7 @@ if(is_object($dockerContainer)) {
             message: '{{Mise en route réussie}}',
             level: 'success'
           });
-            
-          //if($('.configKey[data-l1key=jsonrpc]').is(':checked')) // on démarre le démon pour le mode jsonrpc
+
           jeedom.plugin.deamonStart({id: 'signal'});
         }
       }
