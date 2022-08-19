@@ -24,6 +24,7 @@ if(isset($received) && is_object($received)) {
 
 	$sourceNumber = 	$received->envelope->sourceNumber;
 	$name = 			$received->envelope->sourceName;
+  	$timestamp = 		$received->envelope->timestamp;
 	$msg = 				$received->envelope->syncMessage->sentMessage->message;
 	$recipientNumber = 	$received->envelope->syncMessage->sentMessage->destinationNumber;
 	//log::add('signal', 'debug', "s=" .$sourceNumber ."/n=" . $name . "/m=" .$msg . "/r=" . $recipientNumber);
@@ -36,16 +37,13 @@ if(isset($received) && is_object($received)) {
 			if($oldReceivedMsg == $msg ) { // on force un event intemédiaire pour prise en compte d'un message identique
 				$cmd->event(" ", null);
 				$cmdRaw->event(" ", null);
-          		log::add('signal', 'debug', "event vide");
-
-				//$eqLogic->checkAndUpdateCmd("received", $msg);
-				//$eqLogic->checkAndUpdateCmd("receivedRaw", json_encode($result->received));
 			}
-          	$cmd->event($msg, null);
-          	$preparedRawMsg = html_entity_decode(json_encode($received));
-          	$cmdRaw->event((!is_null($preparedRawMsg)? $preparedRawMsg : "error"), null);
-          	log::add('signal', 'debug', "break");
-			//break;
+          	
+          	// les commandes sont limitées à 255chars dans la BDD, impossible de stocker le json entier, on prend le plus important.
+          	$cmd->event(htmlentities($msg), null);
+          	$moreDatas = Array('sourceNumber' => $sourceNumber, 'sourceName' => $name, 'timestamp' => $timestamp, "message" => $msg);
+          	$cmdRaw->event(json_encode($moreDatas, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP | JSON_UNESCAPED_UNICODE), null);
+			break;
 		}
 	} // fin foreach
 } // fin isset
