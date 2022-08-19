@@ -59,6 +59,7 @@ ws.on('message', function(msg) {
     if (isValidJSONString(msg.toString())) {
       Jeedom.log.debug("[WebSocket] Message reçu: " + msg);
       Jeedom.com.add_changes("received", JSON.parse(msg.toString()))
+      //Jeedom.com.send_change_immediate("received", JSON.parse(msg.toString()))
     } else {
       Jeedom.log.debug("[WebSocket] Impossible de lire le message reçu: " + msg);
     }
