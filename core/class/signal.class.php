@@ -174,6 +174,7 @@ class signal extends eqLogic {
 
 	// Fonction exécutée automatiquement avant la suppression de l'équipement
 	public function preRemove() {
+      self::removeLocalDevice();
 	}
 
 	// Fonction exécutée automatiquement après la suppression de l'équipement
@@ -225,7 +226,6 @@ class signal extends eqLogic {
 	public function send($options) {
 		log::add('signal', 'debug', "[send Options] " . json_encode($options));
 		$port = config::byKey('port', 'signal');
-		$destinataire = config::byKey('port', 'signal');
 		$message = trim($options['message']);
 		$sender = trim($this->getConfiguration("numero"));
 		$recipient = isset($options['number']) ? trim($options['number']) : $sender;
@@ -233,6 +233,21 @@ class signal extends eqLogic {
 		$curl = 'curl -X POST -H "Content-Type: application/json" \'http://localhost:' . 
 				$port . '/v2/send\' -d \'{"message": "' .
 				$message . '", "number": "' . $sender . '", "recipients": [ "' . $recipient . '" ]}\'';
+		
+		log::add('signal', 'debug', '[ENVOI MESSAGE] Requête:<br/>' . $curl);
+		$send = shell_exec($curl);
+		log::add('signal', 'debug', '[RETOUR MESSAGE] ' . $send);
+
+	}
+
+  	//{"error":"This functionality is only available in normal/native mode!"}
+  	public function removeLocalDevice() {
+		log::add('signal', 'debug', "[send removeLocalDevice] ");
+		$port = config::byKey('port', 'signal');
+		$sender = trim($this->getConfiguration("numero"));
+
+		$curl = 'curl -X POST -H "Content-Type: application/json" \'http://localhost:' . 
+				$port . '/v1/unregister/' . $sender . '\' -d \'{"delete_account": false, "delete_local_data": true}\''; // ATTENTION SURTOUT PAS delete_account à true, ça supprime des serveurs signal aussi
 		
 		log::add('signal', 'debug', '[ENVOI MESSAGE] Requête:<br/>' . $curl);
 		$send = shell_exec($curl);
