@@ -32,11 +32,15 @@ if(file_exists($fileAccounts) && count($eqLogics) > 0)
 // Vérifie si docker signal actif
 $dockerContainer = eqLogic::byLogicalId('1::signal', 'docker2');
 $colorCheck = "red";
+$classCheck = "fa-times-circle";
+
 if(is_object($dockerContainer)) {
   $info = $dockerContainer->getCmd(null, 'state');
   //log::add('signal', 'debug', "Etat du container docker signal: " . $info->execCmd());
-  if($info->execCmd() == "running")
+  if($info->execCmd() == "running") {
     $colorCheck = "green";
+  	$classCheck = "fa-check-circle";
+  }
 }
 
 ?>
@@ -104,7 +108,7 @@ if(is_object($dockerContainer)) {
 		<sup><i class="fas fa-question-circle tooltips" title="{{Grâce au plugin Docker Management de jeedom, l'api Signal est accessible dans un container docker}}"></i></sup>
   	  </label>
       <div class="col-md-7">
-        <i class="fas fa-lg fa-check-circle" style=" color: <?=$colorCheck?>"></i> <br /><br /> <a class="btn btn-warning" id="btnInstallSignalDocker">{{Installation/Réinstallation du service}}</a>
+        <i class="fas fa-lg <?=$classCheck?>" style=" color: <?=$colorCheck?>"></i> <br /><br /> <a class="btn btn-warning" id="btnInstallSignalDocker">{{Installation/Réinstallation du service}}</a>
       </div>
     </div>
 
@@ -144,9 +148,10 @@ if(is_object($dockerContainer)) {
           return;
         } else {
           window.toastr.clear()
-          $('.pluginDisplayCard[data-plugin_id=' + $('#span_plugin_id').text() + ']').click()
+          $('.pluginDisplayCard[data-plugin_id=' + $('#span_plugin_id').text() + ']').click();
+          var infoDeamon = $('.configKey[data-l1key=jsonrpc]').is(':checked') ? "{{Merci de patienter, le démon devrait démarrer sous peu.}}" : "{{Le démon n'a pas besoin de démarrer. Tout est opérationnel.}}";
           $('#div_alert').showAlert({
-            message: '{{Mise en route réussie, Merci de patienter, le démon devrait démarrer sous peu}}',
+            message: '{{Mise en route réussie. }}' + infoDeamon,
             level: 'success'
           });
 

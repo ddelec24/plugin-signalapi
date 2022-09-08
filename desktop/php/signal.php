@@ -29,9 +29,12 @@ if(strlen($content) > 50) { // si on a bien des données
 	  $currentNumber = $eqLogic->getConfiguration(null, 'numero');
       $currentNumber = $currentNumber['numero'];
       $params[$eqLogic->getId()]['colorCheck'] = "red";
+      $params[$eqLogic->getId()]['classCheck'] = "fa-times-circle";
       foreach($content->accounts as $account) {
-          if($account->number == $currentNumber)
+          if($account->number == $currentNumber) {
               $params[$eqLogic->getId()]['colorCheck'] = "green";
+          	  $params[$eqLogic->getId()]['classCheck'] = "fa-check-circle";
+          }
       }
   }
 }
@@ -176,7 +179,7 @@ sendVarToJS('paramsSignal', $params);
 								echo '</label>';
 								echo '<div class="col-sm-6">';
 								echo '<a href="http://' . $server . ':' .  (($portSignal == "") ? 8099 : $portSignal) .'/v1/qrcodelink?device_name=signal-api'. ($eqLogic->getId()).'" target="_blank"> Associer mon téléphone avec l\'Api</a> ';
-								echo '&nbsp; <i class="fas fa-lg fa-check-circle checkNumberLinked" style=" color: grey"></i>';
+								echo '&nbsp; <i class="fas fa-lg checkNumberLinked" style=" color: grey"></i>';
 								echo '</div>';
                             	echo '</div>';
 							}

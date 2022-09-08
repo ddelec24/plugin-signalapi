@@ -101,6 +101,9 @@ function isValidNumber(p) {
 
 function printEqLogic(_eqLogic) {
   let eqLogic = _eqLogic.id;
+  console.log(paramsSignal[eqLogic]);
   let colorCheck = (paramsSignal[eqLogic] !== undefined) ? paramsSignal[eqLogic]['colorCheck'] : 'red';
-  $('.checkNumberLinked').attr('style', "color: " + colorCheck + " !important");
+  let classCheck = (paramsSignal[eqLogic] !== undefined) ? paramsSignal[eqLogic]['classCheck'] : "fa-times-circle";
+  $('.checkNumberLinked').removeClass("fa-check-circle").removeClass("fa-times-circle");
+  $('.checkNumberLinked').attr('style', "color: " + colorCheck + " !important").addClass(classCheck);
 }
