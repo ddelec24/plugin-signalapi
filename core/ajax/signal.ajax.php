@@ -44,14 +44,16 @@ catch (Exception $e) {
 
 // install Docker Management
 function installDocker2() {
-  //log::add('signal', 'debug', 'Verification de la présence de docker2');
+  log::add('signal', 'debug', 'Verification de la présence de docker2');
   try {
     $plugin = plugin::byId('docker2');
     if (!$plugin->isActive()) {
       $plugin->setIsEnable(1);
       $plugin->dependancy_install();
+      log::add("signal", "debug", "[DOCKER2] on install juste les dép docker2");
     }
   } catch (Exception $e) {
+    log::add("signal", "debug", "[DOCKER2] on install docker2");
     event::add('jeedom::alert', array(
       'level' => 'warning',
       'page' => 'plugin',
@@ -63,7 +65,7 @@ function installDocker2() {
     }
     $update->setLogicalId('docker2');
     $update->setSource('market');
-    $update->setConfiguration('version', 'beta');
+    $update->setConfiguration('version', 'stable');
     $update->save();
     $update->doUpdate();
     $plugin = plugin::byId('docker2');
@@ -93,7 +95,10 @@ function installDocker2() {
       }
     }
   }
+  sleep(5);
+  log::add("signal", "debug", "[DOCKER2] on pull");
   $pullImage = shell_exec('sudo docker pull bbernhard/signal-cli-rest-api:0.62'); // on précharge l'image
+  log::add("signal", "debug", "[DOCKER2] pull ok");
 }
 
 // création du container Docker

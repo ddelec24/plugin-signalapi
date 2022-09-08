@@ -7,8 +7,5 @@
   },
   "npm" : {
     "plugins/signal/resources/demond"  : {}
-  },
-  "post-install" : {
-    "script" : "plugins/signal/resources/post_install.sh"
   }
 }
