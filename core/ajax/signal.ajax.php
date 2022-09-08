@@ -95,10 +95,8 @@ function installDocker2() {
       }
     }
   }
-  sleep(5);
-  log::add("signal", "debug", "[DOCKER2] on pull");
+  //sleep(5);
   $pullImage = shell_exec('sudo docker pull bbernhard/signal-cli-rest-api:0.62'); // on précharge l'image
-  log::add("signal", "debug", "[DOCKER2] pull ok");
 }
 
 // création du container Docker
