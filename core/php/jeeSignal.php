@@ -25,8 +25,10 @@ if(isset($received) && is_object($received)) {
 	$sourceNumber = 	$received->envelope->sourceNumber;
 	$name = 			$received->envelope->sourceName;
   	$timestamp = 		$received->envelope->timestamp;
-	$msg = 				$received->envelope->syncMessage->sentMessage->message;
-	$recipientNumber = 	$received->envelope->syncMessage->sentMessage->destinationNumber;
+  	$msg = 				$received->envelope->dataMessage->message;
+  	$recipientNumber = 	$received->account;
+	/*$msg = 				$received->envelope->syncMessage->sentMessage->message;
+	$recipientNumber = 	$received->envelope->syncMessage->sentMessage->destinationNumber;*/
 	//log::add('signal', 'debug', "s=" .$sourceNumber ."/n=" . $name . "/m=" .$msg . "/r=" . $recipientNumber);
 	foreach($eqLogics as $eqLogic) {
 		$eqNumero = $eqLogic->getConfiguration(null, 'numero');
@@ -39,8 +41,9 @@ if(isset($received) && is_object($received)) {
 				$cmdRaw->event(" ", null);
 			}
           	
-          	// les commandes sont limitées à 255chars dans la BDD, impossible de stocker le json entier, on prend le plus important.
+          	
           	$cmd->event(htmlentities($msg), null);
+          	// les commandes sont limitées à 255chars dans la BDD, impossible de stocker le json entier, on prend le plus important pour le raw
           	$moreDatas = Array('sourceNumber' => $sourceNumber, 'sourceName' => $name, 'timestamp' => $timestamp, "message" => $msg);
           	$cmdRaw->event(json_encode($moreDatas, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP | JSON_UNESCAPED_UNICODE), null);
 			break;

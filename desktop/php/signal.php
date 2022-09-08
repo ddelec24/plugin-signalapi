@@ -168,7 +168,8 @@ sendVarToJS('paramsSignal', $params);
 							</div>
                             <?php
                             if($displayLink  && count($eqLogics) > 0) {
-                            	$server = $_SERVER['SERVER_NAME'];
+                            	//$server = $_SERVER['SERVER_NAME'];
+                                $server  = self::getNetworkAccess('internal', 'ip', '', false); // ip interne de jeedom
                             	echo '<div class="form-group">';
 								echo '<label class="col-sm-4 control-label">{{QRcode pour lier votre appareil}}';
 								echo '<sup><i class="fas fa-question-circle tooltips" title="{{Voir documentation, il faut scanner un QRcode depuis votre téléphone}}"></i></sup>';

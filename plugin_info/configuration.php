@@ -146,7 +146,7 @@ if(is_object($dockerContainer)) {
           window.toastr.clear()
           $('.pluginDisplayCard[data-plugin_id=' + $('#span_plugin_id').text() + ']').click()
           $('#div_alert').showAlert({
-            message: '{{Mise en route réussie}}',
+            message: '{{Mise en route réussie, Merci de patienter, le démon devrait démarrer sous peu}}',
             level: 'success'
           });
 

@@ -60,6 +60,14 @@ class signal extends eqLogic {
 
 		$signal_path = realpath(dirname(__FILE__) . '/../../resources/demond');
 		chdir($signal_path);
+      	
+      	$docker = eqLogic::byLogicalId('1::signal', 'docker2');
+      	$statusDocker = $docker->getCmd(null, 'state');
+      	log::add('signal', 'debug', 'state courant: ' . $statusDocker->execCmd());
+      	if($statusDocker->execCmd() != "running") {
+          $docker->create();
+          sleep(5); 
+        }
 
       	$listenNumber = config::byKey('listenNumber', __CLASS__);
       
