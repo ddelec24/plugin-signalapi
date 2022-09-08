@@ -93,6 +93,7 @@ function installDocker2() {
       }
     }
   }
+  $pullImage = shell_exec('sudo docker pull bbernhard/signal-cli-rest-api:0.62'); // on précharge l'image
 }
 
 // création du container Docker
