@@ -3,7 +3,15 @@
     "docker2" : {}
   },
   "apt":{
-    "nodejs" : {}
+    "nodejs" : {},
+    "apt-transport-https" : {},
+    "ca-certificates" : {},
+    "curl" : {},
+    "gnupg" : {},
+    "lsb-release" : {},
+    "docker-ce" : {},
+    "docker-ce-cli" : {},
+    "containerd.io" : {}
   },
   "npm" : {
     "plugins/signal/resources/demond"  : {}
