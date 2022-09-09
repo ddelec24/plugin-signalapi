@@ -129,7 +129,14 @@ $isDockerRunning = trim(shell_exec(system::getCmdSudo() . ' pidof dockerd'));
 	if("<?=$isDockerRunning?>" == "")
 		$('.errorDockerRunning').show();
 
+	// affichage au chargement de la page
+    if($('.configKey[data-l1key=jsonrpc]').is(':checked')) {
+      $('.displayListenNumber').show();
+    } else {
+      $('.displayListenNumber').hide();
+    }
 
+	// Affichage au changement
 	$('.configKey[data-l1key=jsonrpc]').on('change', function() {
 		
 		if($(this).is(':checked')) {
