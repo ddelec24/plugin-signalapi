@@ -37,7 +37,7 @@ $classCheck = "fa-times-circle";
 if(is_object($dockerContainer)) {
 	$info = $dockerContainer->getCmd(null, 'state');
 	//log::add('signal', 'debug', "Etat du container docker signal: " . $info->execCmd());
-	if($info->execCmd() == "running") {
+	if(is_object($info) && $info->execCmd() == "running") {
 		$colorCheck = "green";
 		$classCheck = "fa-check-circle";
 	}

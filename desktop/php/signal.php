@@ -12,7 +12,7 @@ $dockerContainer = eqLogic::byLogicalId('1::signal', 'docker2');
 $displayLink = false;
 if(is_object($dockerContainer)) {
   	$info = $dockerContainer->getCmd(null, 'state');
-	if($info->execCmd() == "running")
+	if(is_object($info) && $info->execCmd() == "running")
       $displayLink = true;
 }
 
