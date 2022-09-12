@@ -142,14 +142,46 @@ class signal extends eqLogic {
 		$info->setIsHistorized(1);
 		$info->setConfiguration("historyPurge", "-3 month");
 		$info->save();
-		
+      	
+		$info = $this->getCmd(null, 'sourceName');
+		if (!is_object($info)) {
+			$info = new signalCmd();
+			$info->setName(__("Nom de l expéditeur", __FILE__));
+		}
+		$info->setOrder(3);
+		$info->setLogicalId('sourceName');
+		$info->setEqLogic_id($this->getId());
+		$info->setType('info');
+		$info->setSubType('string');
+		$info->setIsVisible(1);
+		$info->setIsHistorized(1);
+		$info->setDisplay('forceReturnLineAfter', true);
+		$info->setConfiguration("historyPurge", "-3 month");
+		$info->save();
+      	
+		$info = $this->getCmd(null, 'SourceNumber');
+		if (!is_object($info)) {
+			$info = new signalCmd();
+			$info->setName(__("Numéro de l expéditeur", __FILE__));
+		}
+		$info->setOrder(4);
+		$info->setLogicalId('SourceNumber');
+		$info->setEqLogic_id($this->getId());
+		$info->setType('info');
+		$info->setSubType('string');
+		$info->setIsVisible(1);
+		$info->setIsHistorized(1);
+		$info->setDisplay('forceReturnLineAfter', true);
+		$info->setConfiguration("historyPurge", "-3 month");
+		$info->save();
+      
 		// envoi message
 		$cmd = $this->getCmd(null, 'sendMessage');
 		if (!is_object($cmd)) {
 			$cmd = new signalCmd();
 			$cmd->setName(__('Envoi message', __FILE__));
 		}
-		$cmd->setOrder(3);
+		$cmd->setOrder(5);
 		$cmd->setLogicalId('sendMessage');
 		$cmd->setConfiguration('type', 'send');
 		$cmd->setEqLogic_id($this->getId());
@@ -169,7 +201,7 @@ class signal extends eqLogic {
 			$cmd = new signalCmd();
 			$cmd->setName(__('Envoi de fichier', __FILE__));
 		}
-		$cmd->setOrder(4);
+		$cmd->setOrder(6);
 		$cmd->setLogicalId('sendFile');
 		$cmd->setConfiguration('type', 'sendWithAttachements');
 		$cmd->setEqLogic_id($this->getId());
