@@ -30,7 +30,7 @@ if(isset($received) && is_object($received)) {
 	$msg = 				(!empty($received->envelope->dataMessage->message)) ? $received->envelope->dataMessage->message : $received->envelope->syncMessage->sentMessage->message; 
 	$recipientNumber = 	$received->account;
 
-	if($msg != "") {
+	if(!is_object($received->exception) && $msg != "") {
 		foreach($eqLogics as $eqLogic) {
 			$eqNumero = $eqLogic->getConfiguration(null, 'numero');
 			if($eqNumero['numero'] == $recipientNumber && $msg !== "") { // si présence message et qu'on est sur le numéro destinataire on historique le message
