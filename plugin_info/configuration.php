@@ -50,7 +50,7 @@ $isDockerRunning = trim(shell_exec(system::getCmdSudo() . ' pidof dockerd'));
 <form class="form-horizontal">
 	<div class="form-group errorDockerRunning" style="display: none">
 		<div class="col-md-2"></div>
-		<div class="col-md-8 alert alert-danger center">{{Le service docker ne paraît pas actif. Si vous venez juste d&apos;installer les dépendances et voyez ce message, merci de patienter 5 minutes et rafraîchir la page.}}</div>
+		<div class="col-md-8 alert alert-danger center">{{Le service docker ne paraît pas actif. Si vous venez juste d&apos;installer les dépendances et voyez ce message, merci de patienter 5 minutes et rafraîchir la page. Si Docker n&apos;était pas installé sur votre machine, il faudra sûrement redémarrer pour finaliser l&apos;installation !}}</div>
 		<div class="col-md-2"></div>
 	</div>
 	<fieldset>
