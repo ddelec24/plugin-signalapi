@@ -267,6 +267,9 @@ class signal extends eqLogic {
 		log::add('signal', 'debug', "[send Options] " . json_encode($options));
 		$port = config::byKey('port', 'signal');
 		$message = trim($options['message']);
+		$message = preg_replace("/\r\n|\r|\n/", '\\r\\n', $message);
+		
+		
 		$sender = trim($this->getConfiguration("numero"));
 		$recipient = isset($options['number']) ? trim($options['number']) : $sender;
       
@@ -305,7 +308,7 @@ class signal extends eqLogic {
 			$options['file'] = "";
 
         $attachement = $options['file'];
-        $message = $options['message'];
+        $message = trim($options['message']);
       
       	if($attachement == 'error') { // quand on passe une commande et qu'elle est en erreur
 			log::add('signal', 'warning', "Erreur sur la commande utilisée pour envoyer un fichier.");
@@ -328,12 +331,13 @@ class signal extends eqLogic {
       	// nettoyage des caractères qui passent mal
 		$cleanedMessage = str_replace('"', '\"', $message);
 		$cleanedMessage = str_replace("'", "’", $cleanedMessage);
+		$cleanedMessage = preg_replace("/\r\n|\r|\n/", "\\r\\n", $cleanedMessage);
 
 		$sender = trim($this->getConfiguration("numero"));
 		$recipient = isset($options['number']) ? trim($options['number']) : $sender;
 
-		$curl = 'B64TEMPFILE="$(' . system::getCmdSudo() . ' base64 ' . $tmpFolder . "/" . $filename .')" ' . //on met le fichier en b64 dans une variable
-				'&& echo \'{"message": "' . $cleanedMessage . '", "base64_attachments": ["\'"$B64TEMPFILE"\'"], "number": "' . $sender . '", "recipients": [ "' . $recipient . '" ]}\' | ' . // on prépare le json à envoyer à l'api
+		$curl = 'CLEANEDMSG="'.$cleanedMessage.'" && B64TEMPFILE="$(' . system::getCmdSudo() . 'base64 ' . $tmpFolder . "/" . $filename .')" ' . //on met le fichier en b64 dans une variable
+          		'&& printf \'{"message": "%s", "base64_attachments": ["\'"$B64TEMPFILE"\'"], "number": "' . $sender . '", "recipients": [ "' . $recipient . '" ]}\' ${CLEANEDMSG} | ' . // on prépare le json à envoyer à l'api
 				'curl -X POST -H "Content-Type: application/json" -d @- \'http://localhost:' . $port . '/v2/send\''; // envoi du pipe à l'api
 
 		log::add('signal', 'debug', '[ENVOI MESSAGE] Requête:<br/>' . $curl);

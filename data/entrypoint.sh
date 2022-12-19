@@ -6,7 +6,11 @@ set -e
 [ -z "${SIGNAL_CLI_CONFIG_DIR}" ] && echo "SIGNAL_CLI_CONFIG_DIR environmental variable needs to be set! Aborting!" && exit 1;
 
 # jeedom fix
-userdel www-data
+exists=$(grep -c '^www-data:' /etc/passwd)
+if [ $exists -eq 1 ];
+then
+        userdel www-data
+fi;
 
 usermod -u ${SIGNAL_CLI_UID} signal-api
 groupmod -g ${SIGNAL_CLI_GID} signal-api
