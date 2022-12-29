@@ -111,7 +111,6 @@ class signal extends eqLogic {
 
 	// Fonction exécutée automatiquement après la sauvegarde (création ou mise à jour) de l'équipement
 	public function postSave() {
-		// Commande d'historisation des messages reçus (juste le message et brut json)
 		$info = $this->getCmd(null, 'received');
 		if (!is_object($info)) {
 			$info = new signalCmd();
@@ -214,7 +213,21 @@ class signal extends eqLogic {
 
 	// Fonction exécutée automatiquement avant la suppression de l'équipement
 	public function preRemove() {
-      self::removeLocalDevice();
+      	$number = $this->getConfiguration('numero');
+      	if(!empty($number)) {
+          self::removeLocalDevice();
+          // Delete associated groups
+          $type = $this->getConfiguration("type");
+          if($type != 'groups') {
+              $eqLogicsGroups = eqLogic::byTypeAndSearchConfiguration($plugin->getId(), ["associatedNumber" => $number]);
+              if(count($eqLogicsGroups) > 0) {
+                foreach($eqLogicsGroups as $eqLogicGroups) {
+                  	  log::add('signal', 'info', 'Suppression du groupe associé : ' . $eqLogicGroups->getName());
+                      $eqLogicGroups->remove();
+                }
+              }
+          }
+        }
 	}
 
 	// Fonction exécutée automatiquement après la suppression de l'équipement
@@ -227,39 +240,6 @@ class signal extends eqLogic {
         message::add('signal', 'Vous venez de supprimer le dernier numéro, merci de relancer le service dans la page de configuration du plugin si vous aviez activé la reception des messages.');
       }
 	}
-	
-	/*
-	* Permet de crypter/décrypter automatiquement des champs de configuration des équipements
-	* Exemple avec le champ "Mot de passe" (password)
-	public function decrypt() {
-		$this->setConfiguration('password', utils::decrypt($this->getConfiguration('password')));
-	}
-	public function encrypt() {
-		$this->setConfiguration('password', utils::encrypt($this->getConfiguration('password')));
-	}
-	*/
-
-	/*
-	* Permet de modifier l'affichage du widget (également utilisable par les commandes)
-	public function toHtml($_version = 'dashboard') {}
-	*/
-
-	/*
-	* Permet de déclencher une action avant modification d'une variable de configuration du plugin
-	* Exemple avec la variable "param3"
-	public static function preConfig_param3( $value ) {
-		// do some checks or modify on $value
-		return $value;
-	}
-	*/
-
-	/*
-	* Permet de déclencher une action après modification d'une variable de configuration du plugin
-	* Exemple avec la variable "param3"
-	public static function postConfig_param3($value) {
-		// no return value
-	}
-	*/
 
 	/*     * **********************Getteur Setteur*************************** */
 
@@ -331,13 +311,15 @@ class signal extends eqLogic {
       	// nettoyage des caractères qui passent mal
 		$cleanedMessage = str_replace('"', '\"', $message);
 		$cleanedMessage = str_replace("'", "’", $cleanedMessage);
+      	//log::add('signal', 'debug', "message : " . $cleanedMessage);
 		$cleanedMessage = preg_replace("/\r\n|\r|\n/", "\\r\\n", $cleanedMessage);
+      	//log::add('signal', 'debug', "message2 : " . $cleanedMessage);
 
 		$sender = trim($this->getConfiguration("numero"));
 		$recipient = isset($options['number']) ? trim($options['number']) : $sender;
 
 		$curl = 'CLEANEDMSG="'.$cleanedMessage.'" && B64TEMPFILE="$(' . system::getCmdSudo() . 'base64 ' . $tmpFolder . "/" . $filename .')" ' . //on met le fichier en b64 dans une variable
-          		'&& printf \'{"message": "%s", "base64_attachments": ["\'"$B64TEMPFILE"\'"], "number": "' . $sender . '", "recipients": [ "' . $recipient . '" ]}\' ${CLEANEDMSG} | ' . // on prépare le json à envoyer à l'api
+          		'&& printf \'{"message": "%s", "base64_attachments": ["\'"$B64TEMPFILE"\'"], "number": "' . $sender . '", "recipients": [ "' . $recipient . '" ]}\' "${CLEANEDMSG}" | ' . // on prépare le json à envoyer à l'api
 				'curl -X POST -H "Content-Type: application/json" -d @- \'http://localhost:' . $port . '/v2/send\''; // envoi du pipe à l'api
 
 		log::add('signal', 'debug', '[ENVOI MESSAGE] Requête:<br/>' . $curl);
@@ -346,36 +328,9 @@ class signal extends eqLogic {
 		@unlink($tmpFolder . "/" . $filename);
 	}
 
-	/*
-		TMPFILE="$(base64 image_9.jpg)" curl -X POST -H "Content-Type: application/json" -d '{"message": "Test image", "base64_attachments": ["'"${TMPFILE}"'"], "number": "+431212131491291", "
-		recipients": ["+4354546464654"]}' 'http://127.0.0.1:8080/v2/send'
-	*/
-
-	/*
-	TMPFILE="$(base64 video.mp4)" echo '{"message": "Test video", "base64_attachments": ["'"$TMPFILE"'"], "number": "+431212131491291", "recipients": ["+4354546464654"]}' | curl -X POST -H 
-		"Content-Type: application/json" -d @- 'http://127.0.0.1:8080/v2/send'
- 	*/
-
 }
 
 class signalCmd extends cmd {
-	/*     * *************************Attributs****************************** */
-
-	/*
-	public static $_widgetPossibility = array();
-	*/
-
-	/*     * ***********************Methode static*************************** */
-
-
-	/*     * *********************Methode d'instance************************* */
-
-	/*
-	* Permet d'empêcher la suppression des commandes même si elles ne sont pas dans la nouvelle configuration de l'équipement envoyé en JS
-	public function dontRemoveCmd() {
-		return true;
-	}
-	*/
 
 	// Exécution d'une commande
 	public function execute($_options = array()) {
@@ -388,7 +343,6 @@ class signalCmd extends cmd {
 
 			switch ($this->getLogicalId()) {
 				case 'sendMessage':
-						//$request = scenarioExpression::setTags('
 				$eqLogic->send($_options);
 				break;
 				case 'sendFile':
@@ -414,15 +368,24 @@ class signalCmd extends cmd {
 			if (!is_null($data)) {
 			$eqLogics = eqLogic::byType('signal'); // on récup les numéros enregistrés
 			$optionsNumbers = "";
+            $optionsGroups = "";
 			foreach($eqLogics as $eqLogic) {
 				if($eqLogic->getIsEnable()) { // que les actifs
 					$number = $eqLogic->getConfiguration(null, 'numero');
-					$optionsNumbers .= '<option value="' . $number['numero'] . '">' . $number['numero'] . ' ( ' . $eqLogic->getName() . ' )</option>';
+                  	$group = $eqLogic->getConfiguration(null, 'id');
+                  	if(!empty($number['numero']))
+						$optionsNumbers .= '<option value="' . $number['numero'] . '">' . $number['numero'] . ' ( ' . $eqLogic->getName() . ' )</option>';
+                  	if(!empty($group['id']))
+                      	$optionsGroups .= '<option value="' . $group['id'] . '">' . $eqLogic->getName() . '</option>';
 				}
 			}
+
 			if(empty($optionsNumbers))
 				$optionsNumbers = '<option value="">Aucun équipement détecté</option>';
-			
+              
+            if(!empty($optionsGroups))
+              $optionsNumbers = $optionsNumbers . '<optgroup label="Groupes">' . $optionsGroups . '</optgroup';
+              
 			$data = str_replace("#possibleNumbers#", $optionsNumbers, $data);
 			if (version_compare(jeedom::version(),'4.2.0','>=')) {
 				if(!is_array($data)) return array('template' => $data, 'isCoreWidget' => false);

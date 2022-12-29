@@ -26,11 +26,13 @@ if(isset($received) && is_object($received)) {
 	$sourceNumber = 	$received->envelope->sourceNumber;
 	$sourceName = 		$received->envelope->sourceName;
 	$timestamp = 		$received->envelope->timestamp;
-	// suivant is on envoi à nous meme ou non c'est pas la même key
+	// suivant is on envoi à nous meme ou non c'est pas la même key dans le json
 	$msg = 				(!empty($received->envelope->dataMessage->message)) ? $received->envelope->dataMessage->message : $received->envelope->syncMessage->sentMessage->message; 
 	$recipientNumber = 	$received->account;
-
-	if(!is_object($received->exception) && $msg != "") {
+  	$isGroupMessage = (!empty($received->envelope->syncMessage->sentMessage->groupInfo) || !empty($received->envelope->dataMessage->groupInfo)) ? true : false;
+	log::add('signal', 'debug', 'Message de groupe => ' . (($isGroupMessage) ? "OUI" : "NON"));
+  
+	if(!is_object($received->exception) && $msg != "" && !$isGroupMessage) {
 		foreach($eqLogics as $eqLogic) {
 			$eqNumero = $eqLogic->getConfiguration(null, 'numero');
 			if($eqNumero['numero'] == $recipientNumber && $msg !== "") { // si présence message et qu'on est sur le numéro destinataire on historique le message

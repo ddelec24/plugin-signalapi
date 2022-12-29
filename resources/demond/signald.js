@@ -15,7 +15,6 @@
 */
 var Jeedom = require('./jeedom/jeedom.js')
 const WebSocket = require('ws');
-//var LAST_SEND_TOPIC = {}
 
 const args = Jeedom.getArgs()
 if (typeof args.loglevel == 'undefined') {
