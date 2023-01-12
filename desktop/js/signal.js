@@ -101,9 +101,50 @@ function isValidNumber(p) {
 
 function printEqLogic(_eqLogic) {
   let eqLogic = _eqLogic.id;
-  console.log(paramsSignal[eqLogic]);
   let colorCheck = (paramsSignal[eqLogic] !== undefined) ? paramsSignal[eqLogic]['colorCheck'] : 'red';
   let classCheck = (paramsSignal[eqLogic] !== undefined) ? paramsSignal[eqLogic]['classCheck'] : "fa-times-circle";
+  
   $('.checkNumberLinked').removeClass("fa-check-circle").removeClass("fa-times-circle");
   $('.checkNumberLinked').attr('style', "color: " + colorCheck + " !important").addClass(classCheck);
+  
+  if(paramsSignal[eqLogic]['listSignalGroups'] != undefined && colorCheck != "red") {
+   	$('.divSignalGroups').show();
+    $('.resultSignalGroups').html('<i class="fa fa-sync getSignalGroups" aria-hidden="true"></i> &nbsp;' +paramsSignal[eqLogic]['listSignalGroups']);
+    bindSync();   
+  } else {
+    $('.divSignalGroups').hide();
+    $('.resultSignalGroups').text("");
+  }
+ 
+}
+
+function bindSync() {
+  $('.getSignalGroups').on('click', function(e) {
+      console.log('clicked');
+      e.preventDefault();
+      $.ajax({
+        type: "POST",
+        url: "plugins/signal/core/ajax/signal.ajax.php",
+        data: {
+          action: "getSignalGroups",
+          eqLogic: $(".eqLogicAttr[data-l1key=id]").val()
+        },
+        dataType: 'json',
+        error: function(request, status, error) {
+          handleAjaxError(request, status, error);
+        },
+        success: function(data) {
+          if (data.state != 'ok') {
+            $('#div_alert').showAlert({
+              message: data.result,
+              level: 'danger'
+            });
+            return;
+          } else {
+            console.log(data.result);
+            location.reload();
+          }
+        }
+      });
+  });
 }

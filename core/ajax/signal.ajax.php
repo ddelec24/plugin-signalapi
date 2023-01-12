@@ -33,6 +33,9 @@ try {
 		ajax::success(installSignalDocker());
 	}
 
+  	if (init('action') == 'getSignalGroups') { 
+		ajax::success(getSignalGroups(init('eqLogic')));
+	}
 
     throw new Exception(__('Aucune méthode correspondante à', __FILE__) . ' : ' . init('action'));
     /*     * *********Catch exeption*************** */
@@ -151,4 +154,55 @@ function installSignalDocker() {
   sleep(5); // on attend un peu avant pour que le container démarre avant le démon
 
 
+}
+
+function getSignalGroups($eqLogic) {
+	if (!class_exists('docker2')) {
+      include_file('core', 'docker2', 'class', 'docker2');
+    }
+  
+  $port = config::byKey('port', 'signal');
+  $eq = signal::byId($eqLogic);
+  $number = trim($eq->getConfiguration('numero'));
+
+  $curl = 'curl -X GET -H "Content-Type: application/json" \'http://localhost:' . $port . '/v1/groups/' . $number . '\'';
+
+  log::add('signal', 'debug', '[ENVOI MESSAGE] Requête:<br/>' . $curl);
+  $send = shell_exec($curl);
+  $jsonGroups = json_decode($send, true);
+  log::add('signal', 'debug', '[RETOUR MESSAGE] ' . $send);
+  $arrInternalIds = [];
+  // ADD groups
+  foreach($jsonGroups as $group) {
+    log::add('signal', 'debug', '[GROUPS] Sync ' . $group['name']);
+    $arrInternalIds[] = $group['internal_id'];
+    $signal = eqLogic::byLogicalId($group['internal_id'], 'signal');
+    if (!is_object($signal)) {
+      $signal = new signal();
+      $signal->setLogicalId($group['internal_id']);
+    }
+    $signal->setName($group['name']);
+    $signal->setIsEnable(1);
+    $signal->setIsVisible(0);
+    $signal->setEqType_name('signal');
+    $signal->setConfiguration('type', 'groups');
+    $signal->setConfiguration('id', $group['id']);
+    $signal->setConfiguration('associatedNumber', $number);
+    $signal->save();
+  }
+  
+  // DELETE old groups
+  $signalGroups = eqLogic::byTypeAndSearchConfiguration('signal', '"type":"groups"');
+  foreach($signalGroups as $signalGroup) {
+   	$internalId = $signalGroup->getLogicalId();
+    $associatedNumber = $signalGroup->getConfiguration('associatedNumber');
+    if($associatedNumber != $number)
+      continue;
+    if(!in_array($internalId, $arrInternalIds)) {
+    	log::add('signal', 'debug', '[GROUPS] Inexistant group detected: ' . $signalGroup->getName() . ' ... Deleted');
+    }
+  }
+    
+  
+  return "[GROUPS] Synced " . count($jsonGroups) . " groups.";
 }

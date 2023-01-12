@@ -7,7 +7,7 @@ set -e
 
 # jeedom fix
 exists=$(grep -c '^www-data:' /etc/passwd)
-if [ $exists -eq 1 ];
+if [ ${exists} -eq 1 ];
 then
         userdel www-data
 fi;
