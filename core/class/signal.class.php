@@ -282,12 +282,27 @@ class signal extends eqLogic {
 		log::add('signal', 'debug', "[sendFile Options] " . json_encode($options));
 		$port = config::byKey('port', 'signal');
 		
-		if ((isset($options['file'])) && ($options['file'] == ""))
-			$options['file'] = 'error';
-		if (!(isset($options['file'])))
-			$options['file'] = "";
+      	if(!(isset($options['file'])) && !(isset($options['files']))) {
+			$file = "";
+        } else {
+          if(isset($options['file'])) {
+          	if($options['file'] == "") {
+              $file = 'error';
+            } else {
+              $file = $options['file'];
+            }
+          } elseif(isset($options['files'])) {
+          	if(sizeof($options['files']) == 0) {
+              $file = 'error';
+            } else {
+              $file = $options['files'][0]; // 1 seule pièce jointe, à voir si possibilité de multiples fichiers dans le futur
+            }
+          } else {
+            $file = 'error';
+          }
+        }
 
-        $attachement = $options['file'];
+        $attachement = $file;
         $message = trim($options['message']);
       
       	if($attachement == 'error') { // quand on passe une commande et qu'elle est en erreur
@@ -299,6 +314,7 @@ class signal extends eqLogic {
 		$tmpFolder = jeedom::getTmpFolder('signal');
       	// si c'est une url il faut pas récupérer les éventuels arguments pour le nom du fichier
 		$filename = (substr($attachement, 0, 4) == 'http') ? basename(parse_url($attachement)['path']) : basename($attachement); 
+      	log::add('signal', 'debug', 'chemin du fichier: '. $filename);
 		$contentFile = @file_get_contents($attachement);
       
       	if(!$contentFile || strlen($contentFile) == 0) {
