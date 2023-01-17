@@ -247,6 +247,9 @@ class signal extends eqLogic {
 		log::add('signal', 'debug', "[send Options] " . json_encode($options));
 		$port = config::byKey('port', 'signal');
 		$message = trim($options['message']);
+      	// nettoyage des caractères qui passent mal
+		$message = str_replace('"', '\"', $message);
+		$message = str_replace("'", "’", $message);
 		$message = preg_replace("/\r\n|\r|\n/", '\\r\\n', $message);
 		
 		
