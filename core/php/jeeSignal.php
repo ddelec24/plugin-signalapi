@@ -51,6 +51,9 @@ if(isset($received) && is_object($received)) {
 				}
               	$msg = htmlentities($msg);
               	$msg = preg_replace("/\\r\\n/u", "\n", $msg);
+              	if(strlen($msg) > 115) {
+                  $msg = substr($msg, 0, 115) . "...";
+                }
 				$cmd->event($msg, null);
 				$cmdSourceNumber->event($sourceNumber, null);
               
