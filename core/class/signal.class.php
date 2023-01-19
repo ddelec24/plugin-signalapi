@@ -214,11 +214,19 @@ class signal extends eqLogic {
 	// Fonction exécutée automatiquement avant la suppression de l'équipement
 	public function preRemove() {
       	$number = $this->getConfiguration('numero');
+      	$plugin = plugin::byId('signal');
+      	if(config::byKey('jsonrpc', __CLASS__)) {
+         	log::add('signal', 'warning', 'Impossible de supprimer le numéro car la réception en temps réelle est active, merci de le désactiver dans la configuration du plugin pour pouvoir supprimer cet équipement');
+          	throw new Exception(__('Impossible de supprimer le numéro car la réception en temps réelle est active, merci de le désactiver dans la configuration du plugin pour pouvoir supprimer cet équipement.', __FILE__));
+          	return false;
+        }
+      
       	if(!empty($number)) {
           self::removeLocalDevice();
           // Delete associated groups
           $type = $this->getConfiguration("type");
           if($type != 'groups') {
+           	  //log::add('signal', 'debug', 'suppression groupes pour ' . $number);
               $eqLogicsGroups = eqLogic::byTypeAndSearchConfiguration($plugin->getId(), ["associatedNumber" => $number]);
               if(count($eqLogicsGroups) > 0) {
                 foreach($eqLogicsGroups as $eqLogicGroups) {
@@ -268,16 +276,16 @@ class signal extends eqLogic {
 
   	//{"error":"This functionality is only available in normal/native mode!"}
   	public function removeLocalDevice() {
-		log::add('signal', 'debug', "[send removeLocalDevice] ");
+		//log::add('signal', 'debug', "[send removeLocalDevice] ");
 		$port = config::byKey('port', 'signal');
 		$sender = trim($this->getConfiguration("numero"));
 
 		$curl = 'curl -X POST -H "Content-Type: application/json" \'http://localhost:' . 
 				$port . '/v1/unregister/' . $sender . '\' -d \'{"delete_account": false, "delete_local_data": true}\''; // ATTENTION SURTOUT PAS delete_account à true, ça supprime des serveurs signal aussi
 		
-		log::add('signal', 'debug', '[ENVOI MESSAGE] Requête:<br/>' . $curl);
+		log::add('signal', 'debug', '[REMOVE NUMBER] Requête:<br/>' . $curl);
 		$send = shell_exec($curl);
-		log::add('signal', 'debug', '[RETOUR MESSAGE] ' . $send);
+		//log::add('signal', 'debug', '[RETOUR MESSAGE] ' . $send);
 
 	}
 	
