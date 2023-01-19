@@ -167,11 +167,17 @@ function getSignalGroups($eqLogic) {
 
   $curl = 'curl -X GET -H "Content-Type: application/json" \'http://localhost:' . $port . '/v1/groups/' . $number . '\'';
 
-  log::add('signal', 'debug', '[ENVOI MESSAGE] Requête:<br/>' . $curl);
+  log::add('signal', 'debug', '[GROUPS] Envoi Requête:<br/>' . $curl);
   $send = shell_exec($curl);
   $jsonGroups = json_decode($send, true);
-  log::add('signal', 'debug', '[RETOUR MESSAGE] ' . $send);
+  log::add('signal', 'debug', '[GROUPS] Retour: ' . $send);
   $arrInternalIds = [];
+  
+  if(array_key_exists('error', $jsonGroups)) {
+    log::add('signal', 'warning', '[GROUPS] Error : ' . $jsonGroups['error']);
+    return false;
+  }
+  
   // ADD groups
   foreach($jsonGroups as $group) {
     log::add('signal', 'debug', '[GROUPS] Sync ' . $group['name']);
@@ -200,6 +206,7 @@ function getSignalGroups($eqLogic) {
       continue;
     if(!in_array($internalId, $arrInternalIds)) {
     	log::add('signal', 'debug', '[GROUPS] Inexistant group detected: ' . $signalGroup->getName() . ' ... Deleted');
+      	$signalGroup->remove();
     }
   }
     
