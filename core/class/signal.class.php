@@ -109,6 +109,25 @@ class signal extends eqLogic {
 		system::fuserk(config::byKey('socketport', __CLASS__));
 	}
 
+    /*
+    * Fonction exécutée automatiquement tous les jours par Jeedom */
+    public static function cronDaily() { //cron5 for tests
+      	$jsonrpcState = config::byKey('jsonrpc', __CLASS__);
+      	$listenNumber = config::byKey('listenNumber', __CLASS__);
+
+      	$eqLogics = eqLogic::byType('signal'); // on récup les numéros enregistrés
+		foreach($eqLogics as $eqLogic) {
+          $type = $eqLogic->getConfiguration("type");
+          $currentnumber = $eqLogic->getConfiguration(null, 'numero');
+          if($type != 'groups' && $eqLogic->getIsEnable()) {
+            // Il faut impérativement avoir une réception tous les 35 jours maximum sinon l'autorisation API expire.
+            // Réception journalière des équipements actifs qui ne sont pas en réception automatique (mode RPC)
+            if($listenNumber != $currentnumber['numero'] || $jsonrpcState != 1)
+          		$eqLogic->normalReceive();
+          }
+        }
+    }
+    
 	// Fonction exécutée automatiquement après la sauvegarde (création ou mise à jour) de l'équipement
 	public function postSave() {
 		$info = $this->getCmd(null, 'received');
@@ -209,6 +228,11 @@ class signal extends eqLogic {
 		$cmd->setIsVisible(0);
 		$cmd->setDisplay('forceReturnLineBefore', true);
 		$cmd->save();
+      
+      	$jsonrpcState = config::byKey('jsonrpc', __CLASS__);
+      	
+      	if($jsonrpcState != 1 && $this->getConfiguration("type") != "groups")
+      		$this->normalReceive();
 	}
 
 	// Fonction exécutée automatiquement avant la suppression de l'équipement
@@ -226,7 +250,6 @@ class signal extends eqLogic {
           // Delete associated groups
           $type = $this->getConfiguration("type");
           if($type != 'groups') {
-           	  //log::add('signal', 'debug', 'suppression groupes pour ' . $number);
               $eqLogicsGroups = eqLogic::byTypeAndSearchConfiguration($plugin->getId(), ["associatedNumber" => $number]);
               if(count($eqLogicsGroups) > 0) {
                 foreach($eqLogicsGroups as $eqLogicGroups) {
@@ -274,9 +297,7 @@ class signal extends eqLogic {
 
 	}
 
-  	//{"error":"This functionality is only available in normal/native mode!"}
   	public function removeLocalDevice() {
-		//log::add('signal', 'debug', "[send removeLocalDevice] ");
 		$port = config::byKey('port', 'signal');
 		$sender = trim($this->getConfiguration("numero"));
 
@@ -285,11 +306,88 @@ class signal extends eqLogic {
 		
 		log::add('signal', 'debug', '[REMOVE NUMBER] Requête:<br/>' . $curl);
 		$send = shell_exec($curl);
-		//log::add('signal', 'debug', '[RETOUR MESSAGE] ' . $send);
-
 	}
 	
+    public function normalReceive() {
+
+		$port = config::byKey('port', 'signal');
+		$receive = trim($this->getConfiguration("numero"));
+
+      	$curl = 'curl -X GET -H "Content-Type: application/json" \'http://localhost:' . 
+          		$port . '/v1/receive/' . $receive . '\'';
+
+		
+		log::add('signal', 'debug', '[RECEIVE] Requête: ' . $curl);
+		$curlret = shell_exec($curl);
+		log::add('signal', 'debug', '[RETOUR RECEIVE] ' . $curlret);
+      
+      	if(strlen($curlret) > 5) { // on a reçu quelquechose depuis la dernière fois
+          $arrayMsg = json_decode($curlret);
+
+          if(isset($arrayMsg) && is_array($arrayMsg)) {
+              $nbNewMsgs = 		sizeof($arrayMsg);
+              $received = 		$arrayMsg[$nbNewMsgs - 1]; // get last message
+              
+              $sourceNumber = 	$received->envelope->sourceNumber;
+              $sourceName = 	$received->envelope->sourceName;
+              $timestamp = 		$received->envelope->timestamp;
+              // suivant is on envoi à nous meme ou non c'est pas la même key dans le json
+              $msg = 				(!empty($received->envelope->dataMessage->message)) ? $received->envelope->dataMessage->message : $received->envelope->syncMessage->sentMessage->message; 
+              $recipientNumber = 	$received->account;
+              $isGroupMessage = 	(!empty($received->envelope->syncMessage->sentMessage->groupInfo) || !empty($received->envelope->dataMessage->groupInfo)) ? true : false;
+
+              if(!is_object($received->exception) && $msg != "" && !$isGroupMessage) {
+               	  $eqLogics = eqLogic::byType('signal');
+                  foreach($eqLogics as $eqLogic) {
+                      $eqNumero = $eqLogic->getConfiguration(null, 'numero');
+                      if($eqNumero['numero'] == $recipientNumber && $msg !== "") { // si présence message et qu'on est sur le numéro destinataire on historique le message
+                          log::add('signal', 'debug', '[RECEIVE] Message entrant, numéro '  . $eqNumero['numero'] . " : " . nl2br($msg));
+                          $cmd = $eqLogic->getCmd(null, 'received');
+                          $cmdRaw = $eqLogic->getCmd(null, 'receivedRaw');
+                          $cmdSourceName = $eqLogic->getCmd(null, 'sourceName');
+                          $cmdSourceNumber = $eqLogic->getCmd(null, 'sourceNumber');
+                          $oldReceivedMsg = $cmd->execCmd();
+
+                          if($oldReceivedMsg == $msg ) { // on force un event intemédiaire pour prise en compte d'un message identique
+                              $cmd->event(" ", null);
+                              $cmdRaw->event(" ", null);
+                              $cmdSourceName->event(" ", null);
+                              $cmdSourceNumber->event(" ", null);
+                          }
+                          $msg = htmlentities($msg);
+                          $msg = preg_replace("/\\r\\n/u", "\n", $msg);
+                          if(strlen($msg) > 115) {
+                            $msg = substr($msg, 0, 115) . "...";
+                          }
+                          $cmd->event($msg, null);
+                          $cmdSourceNumber->event($sourceNumber, null);
+
+                          if($sourceName != "")
+                              $cmdSourceName->event($sourceName, null);
+
+                          // les commandes sont limitées à 255chars dans la BDD, impossible de stocker le json entier donc je prends que quelques éléments
+                          $moreDatas = Array('sourceNumber' => $sourceNumber, 'sourceName' => $sourceName, 'timestamp' => $timestamp);
+                          $cmdRaw->event(json_encode($moreDatas), null);
+                          break;
+                      }
+                  } // fin foreach
+              } // msg non vide
+          } // fin isset 
+        }
+    }
+  
 	public function sendFile($options) {
+      	/*
+        //
+        // A PARTIR DE l'API 0.65, possibilité de customiser le nom du filename, code:
+        // https://github.com/bbernhard/signal-cli-rest-api/blob/master/src/api/api.go#L99
+        //
+        // api.SendMessageV2{
+		//	base64_attachments	[
+				example: List [ "<BASE64 ENCODED DATA>", "data:<MIME-TYPE>;base64<comma><BASE64 ENCODED DATA>", "data:<MIME-TYPE>;filename=<FILENAME>;base64<comma><BASE64 ENCODED DATA>" ]
+        //  ]
+        
+        */
 		log::add('signal', 'debug', "[sendFile Options] " . json_encode($options));
 		$port = config::byKey('port', 'signal');
 		
