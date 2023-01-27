@@ -180,21 +180,24 @@ function getSignalGroups($eqLogic) {
   
   // ADD groups
   foreach($jsonGroups as $group) {
-    log::add('signal', 'debug', '[GROUPS] Sync ' . $group['name']);
-    $arrInternalIds[] = $group['internal_id'];
-    $signal = eqLogic::byLogicalId($group['internal_id'], 'signal');
-    if (!is_object($signal)) {
-      $signal = new signal();
-      $signal->setLogicalId($group['internal_id']);
+    $groupName = $group['name'];
+    log::add('signal', 'debug', '[GROUPS] Sync ' . $groupName);
+    if($groupName != "") {
+      $arrInternalIds[] = $group['internal_id'];
+      $signal = eqLogic::byLogicalId($group['internal_id'], 'signal');
+      if (!is_object($signal)) {
+        $signal = new signal();
+        $signal->setLogicalId($group['internal_id']);
+      }
+      $signal->setName($groupName);
+      $signal->setIsEnable(1);
+      $signal->setIsVisible(0);
+      $signal->setEqType_name('signal');
+      $signal->setConfiguration('type', 'groups');
+      $signal->setConfiguration('id', $group['id']);
+      $signal->setConfiguration('associatedNumber', $number);
+      $signal->save();
     }
-    $signal->setName($group['name']);
-    $signal->setIsEnable(1);
-    $signal->setIsVisible(0);
-    $signal->setEqType_name('signal');
-    $signal->setConfiguration('type', 'groups');
-    $signal->setConfiguration('id', $group['id']);
-    $signal->setConfiguration('associatedNumber', $number);
-    $signal->save();
   }
   
   // DELETE old groups
@@ -204,8 +207,8 @@ function getSignalGroups($eqLogic) {
     $associatedNumber = $signalGroup->getConfiguration('associatedNumber');
     if($associatedNumber != $number)
       continue;
-    if(!in_array($internalId, $arrInternalIds)) {
-    	log::add('signal', 'debug', '[GROUPS] Inexistant group detected: ' . $signalGroup->getName() . ' ... Deleted');
+    if(!in_array($internalId, $arrInternalIds) || $signalGroup->getName() == "") { //vu que mickae1 m'a remonté le cas d'un groupe sans nom, il faut le supprimer si présent
+    	log::add('signal', 'debug', '[GROUPS] Suppression groupe inexistant: ' . $signalGroup->getName());
       	$signalGroup->remove();
     }
   }
