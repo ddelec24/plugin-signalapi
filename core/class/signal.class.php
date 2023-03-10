@@ -390,7 +390,7 @@ class signal extends eqLogic {
         */
 		log::add('signal', 'debug', "[sendFile Options] " . json_encode($options));
 		$port = config::byKey('port', 'signal');
-		
+            
       	if(!(isset($options['file'])) && !(isset($options['files']))) {
 			$file = "";
         } else {
@@ -404,7 +404,7 @@ class signal extends eqLogic {
           	if(sizeof($options['files']) == 0) {
               $file = 'error';
             } else {
-              $file = $options['files'][0]; // 1 seule pièce jointe, à voir si possibilité de multiples fichiers dans le futur
+                $file = $options['files'][0]; // 1 seule pièce jointe, à voir si possibilité de multiples fichiers dans le futur
             }
           } else {
             $file = 'error';
@@ -412,6 +412,7 @@ class signal extends eqLogic {
         }
 
         $attachement = $file;
+      	log::add('signal', 'debug', 'file: '. $attachement);
         $message = trim($options['message']);
       
       	if($attachement == 'error') { // quand on passe une commande et qu'elle est en erreur
@@ -459,66 +460,79 @@ class signal extends eqLogic {
 class signalCmd extends cmd {
 
 	// Exécution d'une commande
-	public function execute($_options = array()) {
+    public function execute($_options = array()) {
 
-		if ($this->getType() != 'action') {
-			return;
-		}
-		
-			$eqLogic = $this->getEqLogic(); // Récupération de l’eqlogic
+        if ($this->getType() != 'action')
+            return;
 
-			switch ($this->getLogicalId()) {
-				case 'sendMessage':
-				$eqLogic->send($_options);
-				break;
-				case 'sendFile':
-				$eqLogic->sendFile($_options);
-				break;
-				default:
-				throw new Error('This should not append!');
-				log::add('signal', 'warning', 'Error while executing cmd ' . $this->getLogicalId());
-				break;
-			}
-		}
+        $options = array();
+
+        if (isset($_options['file']))
+            $options = arg2array($_options['file']);
+
+        if (isset($options['rtspVideo'])) {
+            $save = '/tmp/signal_' . $this->getId() . '.mp4';
+            unlink($save);
+            $cmd = 'ffmpeg -rtsp_transport tcp -loglevel fatal -i "' . $options['rtspVideo'] . '" -c:v copy -bsf:a aac_adtstoasc -y -t 10 -movflags faststart ' . $save;
+            shell_exec($cmd);
+            unset($_options['file']);
+            $_options['files'][] = $save;
+        }
+
+        $eqLogic = $this->getEqLogic(); // Récupération de l’eqlogic
+
+        switch ($this->getLogicalId()) {
+            case 'sendMessage':
+            $eqLogic->send($_options);
+            break;
+            case 'sendFile':
+            $eqLogic->sendFile($_options);
+            break;
+            default:
+            throw new Error('This should not append!');
+            log::add('signal', 'warning', 'Error while executing cmd ' . $this->getLogicalId());
+            break;
+        }
+    }
 
 
-		public function getWidgetTemplateCode($_version = 'dashboard', $_clean = true, $_widgetName = '') {
-			$data = null;
-			if ($_version != 'scenario') 
-				return parent::getWidgetTemplateCode($_version, $_clean, $_widgetName);
-			if ($this->getConfiguration('type') == 'sendWithAttachements')
-				$data = getTemplate('core', 'scenario', 'cmd.sendWithAttachements', 'signal');
-			if ($this->getConfiguration('type') == 'send')
-				$data = getTemplate('core', 'scenario', 'cmd.send', 'signal');
+    public function getWidgetTemplateCode($_version = 'dashboard', $_clean = true, $_widgetName = '') {
+        $data = null;
+        if ($_version != 'scenario') 
+            return parent::getWidgetTemplateCode($_version, $_clean, $_widgetName);
+        if ($this->getConfiguration('type') == 'sendWithAttachements')
+            $data = getTemplate('core', 'scenario', 'cmd.sendWithAttachements', 'signal');
+        if ($this->getConfiguration('type') == 'send')
+            $data = getTemplate('core', 'scenario', 'cmd.send', 'signal');
 
-			if (!is_null($data)) {
-			$eqLogics = eqLogic::byType('signal'); // on récup les numéros enregistrés
-			$optionsNumbers = "";
+        if (!is_null($data)) {
+            $eqLogics = eqLogic::byType('signal'); // on récup les numéros enregistrés
+            $optionsNumbers = "";
             $optionsGroups = "";
-			foreach($eqLogics as $eqLogic) {
-				if($eqLogic->getIsEnable()) { // que les actifs
-					$number = $eqLogic->getConfiguration(null, 'numero');
-                  	$group = $eqLogic->getConfiguration(null, 'id');
-                  	if(!empty($number['numero']))
-						$optionsNumbers .= '<option value="' . $number['numero'] . '">' . $number['numero'] . ' ( ' . $eqLogic->getName() . ' )</option>';
-                  	if(!empty($group['id']))
-                      	$optionsGroups .= '<option value="' . $group['id'] . '">' . $eqLogic->getName() . '</option>';
-				}
-			}
+            foreach($eqLogics as $eqLogic) {
+                if($eqLogic->getIsEnable()) { // que les actifs
+                    $number = $eqLogic->getConfiguration(null, 'numero');
+                    $group = $eqLogic->getConfiguration(null, 'id');
+                    if(!empty($number['numero']))
+                        $optionsNumbers .= '<option value="' . $number['numero'] . '">' . $number['numero'] . ' ( ' . $eqLogic->getName() . ' )</option>';
+                    if(!empty($group['id']))
+                        $optionsGroups .= '<option value="' . $group['id'] . '">' . $eqLogic->getName() . '</option>';
+                }
+            }
 
-			if(empty($optionsNumbers))
-				$optionsNumbers = '<option value="">Aucun équipement détecté</option>';
-              
+            if(empty($optionsNumbers))
+                $optionsNumbers = '<option value="">Aucun équipement détecté</option>';
+
             if(!empty($optionsGroups))
-              $optionsNumbers = $optionsNumbers . '<optgroup label="Groupes">' . $optionsGroups . '</optgroup';
-              
-			$data = str_replace("#possibleNumbers#", $optionsNumbers, $data);
-			if (version_compare(jeedom::version(),'4.2.0','>=')) {
-				if(!is_array($data)) return array('template' => $data, 'isCoreWidget' => false);
-			} else return $data;
-		}
-		return parent::getWidgetTemplateCode($_version, $_clean, $_widgetName);
-	}
+                $optionsNumbers = $optionsNumbers . '<optgroup label="Groupes">' . $optionsGroups . '</optgroup';
+
+            $data = str_replace("#possibleNumbers#", $optionsNumbers, $data);
+            if (version_compare(jeedom::version(),'4.2.0','>=')) {
+                if(!is_array($data)) return array('template' => $data, 'isCoreWidget' => false);
+            } else return $data;
+        }
+        return parent::getWidgetTemplateCode($_version, $_clean, $_widgetName);
+    }
 	/*     * **********************Getteur Setteur*************************** */
 
 }
