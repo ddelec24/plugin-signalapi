@@ -128,6 +128,10 @@ class signal extends eqLogic {
         }
     }
     
+  public static function backupExclude() {
+  	return ["data/signal-cli-config/attachments"];  
+  }
+  
 	// Fonction exécutée automatiquement après la sauvegarde (création ou mise à jour) de l'équipement
 	public function postSave() {
 		$info = $this->getCmd(null, 'received');
