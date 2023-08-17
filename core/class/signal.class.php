@@ -233,10 +233,13 @@ class signal extends eqLogic {
 		$cmd->setDisplay('forceReturnLineBefore', true);
 		$cmd->save();
       
+      	$this->syncContacts();
+      
       	$jsonrpcState = config::byKey('jsonrpc', __CLASS__);
-      	
+      		
       	if($jsonrpcState != 1 && $this->getConfiguration("type") != "groups")
       		$this->normalReceive();
+      
 	}
 
 	// Fonction exécutée automatiquement avant la suppression de l'équipement
@@ -310,6 +313,41 @@ class signal extends eqLogic {
 		
 		log::add('signal', 'debug', '[REMOVE NUMBER] Requête:<br/>' . $curl);
 		$send = shell_exec($curl);
+	}
+	
+  	public function syncContacts() {
+		$port = config::byKey('port', 'signal');
+		$sender = trim($this->getConfiguration("numero"));
+
+		$curl = 'curl -X GET -H "Content-Type: application/json" \'http://localhost:' . 
+				$port . '/v1/identities/' . $sender . '\''; // récupère les contacts signal
+		log::add('signal', 'debug', '[GET CONTACTS] Requête:<br/>' . $curl);
+		$contacts = shell_exec($curl);
+      	if(strlen($contacts) > 5) { // on a reçu quelquechose
+          $arrContacts = json_decode($contacts);
+          
+          if(isset($arrContacts) && is_array($arrContacts)) {
+            $savedContactList = $this->getConfiguration("contactsList");
+            if(empty($savedContactList))
+              $savedContactList = array();
+
+            foreach($arrContacts as $contact) {
+              if($contact->number == $sender || empty($contact->number)) // évite dajouter son propre numéro ou un vide
+                continue;
+              
+              if(in_array($contact->number, array_column($savedContactList, "number"))) // on l'a déjà synchro
+                continue;
+              
+              $newContact = ["number" => $contact->number, "name" => "", "display" => false];
+              log::add('signal', 'debug', '[GET CONTACTS] Sauvegarde contact: ' . json_encode($newContact));
+              $savedContactList[] = $newContact;
+            }
+            //log::add('signal', 'debug', '[GET CONTACTS] Liste actuelle: ' . gettype($savedContactList) . "/" . json_encode($savedContactList));
+            
+            $this->setConfiguration('contactsList', $savedContactList);
+            $this->save(true); // force enregistrement car on est dans le postSave()
+          }
+        }
 	}
 	
     public function normalReceive() {
@@ -513,14 +551,29 @@ class signalCmd extends cmd {
             $eqLogics = eqLogic::byType('signal'); // on récup les numéros enregistrés
             $optionsNumbers = "";
             $optionsGroups = "";
+          	$optionsContacts = "";
             foreach($eqLogics as $eqLogic) {
                 if($eqLogic->getIsEnable()) { // que les actifs
                     $number = $eqLogic->getConfiguration(null, 'numero');
                     $group = $eqLogic->getConfiguration(null, 'id');
+                  	$contacts = $eqLogic->getConfiguration('contactsList');
+                  
                     if(!empty($number['numero']))
                         $optionsNumbers .= '<option value="' . $number['numero'] . '">' . $number['numero'] . ' ( ' . $eqLogic->getName() . ' )</option>';
+                  
                     if(!empty($group['id']))
                         $optionsGroups .= '<option value="' . $group['id'] . '">' . $eqLogic->getName() . '</option>';
+                  
+                  	if(!empty($contacts)) {
+                      	// on filtre pour avoir que ceux à afficher
+                      	$contacts = array_filter($contacts, function($k) {
+                            return $k['display'] === true;
+                          });
+                      	foreach($contacts as $contact) {  	                          
+                      		$optionsContacts .= '<option value="' . $contact['number'] .'">' . $contact['number'] . ' ( ' . $contact['name'] . ' )</options>';
+                        }
+                      }
+                  	
                 }
             }
 
@@ -528,7 +581,10 @@ class signalCmd extends cmd {
                 $optionsNumbers = '<option value="">Aucun équipement détecté</option>';
 
             if(!empty($optionsGroups))
-                $optionsNumbers = $optionsNumbers . '<optgroup label="Groupes">' . $optionsGroups . '</optgroup';
+                $optionsNumbers .= '<optgroup label="Groupes">' . $optionsGroups . '</optgroup>';
+          
+          	if(!empty($optionsContacts))
+              	$optionsNumbers .= '<optgroup label="Contacts">' . $optionsContacts . '</optgroup>';
 
             $data = str_replace("#possibleNumbers#", $optionsNumbers, $data);
             if (version_compare(jeedom::version(),'4.2.0','>=')) {
