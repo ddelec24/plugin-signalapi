@@ -1,7 +1,7 @@
 version: "3"
 services:
   signal:
-    image: bbernhard/signal-cli-rest-api:0.80
+    image: bbernhard/signal-cli-rest-api:0.81
     restart: always
     container_name: signal
     privileged: true
