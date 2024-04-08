@@ -2,6 +2,7 @@
 if (!isConnect('admin')) {
 	throw new Exception('{{401 - Accès non autorisé}}');
 }
+
 // Déclaration des variables obligatoires
 $plugin = plugin::byId('signal');
 sendVarToJS('eqType', $plugin->getId());
@@ -10,10 +11,11 @@ $eqLogics = eqLogic::byType($plugin->getId());
 $portSignal = config::byKey('port', 'signal');
 $dockerContainer = eqLogic::byLogicalId('1::signal', 'docker2');
 $displayLink = false;
+
 if(is_object($dockerContainer)) {
-  	$info = $dockerContainer->getCmd(null, 'state');
+	$info = $dockerContainer->getCmd(null, 'state');
 	if(is_object($info) && $info->execCmd() == "running")
-      $displayLink = true;
+		$displayLink = true;
 }
 
 
@@ -24,36 +26,36 @@ $content = @file_get_contents($fileAccounts);
 $params = [];
 
 if(strlen($content) > 50) { // si on a bien des données
-  $content = json_decode($content);
-  foreach($eqLogics as $eqLogic) {
-	  $currentNumber = $eqLogic->getConfiguration('numero', '+99999');
-      $params[$eqLogic->getId()]['colorCheck'] = "red";
-      $params[$eqLogic->getId()]['classCheck'] = "fa-times-circle";
-      foreach($content->accounts as $account) {
-          if($account->number == $currentNumber) {
-              $params[$eqLogic->getId()]['colorCheck'] = "green";
-          	  $params[$eqLogic->getId()]['classCheck'] = "fa-check-circle";
-            
-              // list of associated Groups
-              $eqLogicsGroups = eqLogic::byTypeAndSearchConfiguration($plugin->getId(), ["associatedNumber" => $currentNumber]);
-              if(count($eqLogicsGroups) > 0) {
-                $lstGroups = implode(', ', array_map(function($c) {
-                  return $c->getName();
-                }, $eqLogicsGroups));
-                $params[$eqLogic->getId()]['listSignalGroups'] =  $lstGroups  . ".";
-              } else {
-                $params[$eqLogic->getId()]['listSignalGroups'] = "Aucun groupe trouvé actuellement.";
-              }
-          }
-      }
-  }
+	$content = json_decode($content);
+	foreach($eqLogics as $eqLogic) {
+		$currentNumber = $eqLogic->getConfiguration('numero', '+99999');
+		$params[$eqLogic->getId()]['colorCheck'] = "red";
+		$params[$eqLogic->getId()]['classCheck'] = "fa-times-circle";
+		foreach($content->accounts as $account) {
+			if($account->number == $currentNumber) {
+				$params[$eqLogic->getId()]['colorCheck'] = "green";
+				$params[$eqLogic->getId()]['classCheck'] = "fa-check-circle";
+
+			// list of associated Groups
+				$eqLogicsGroups = eqLogic::byTypeAndSearchConfiguration($plugin->getId(), ["associatedNumber" => $currentNumber]);
+				if(count($eqLogicsGroups) > 0) {
+					$lstGroups = implode(', ', array_map(function($c) {
+						return $c->getName();
+					}, $eqLogicsGroups));
+					$params[$eqLogic->getId()]['listSignalGroups'] =  $lstGroups  . ".";
+				} else {
+					$params[$eqLogic->getId()]['listSignalGroups'] = "Aucun groupe trouvé actuellement.";
+				}
+			}
+		}
+	}
 }
 sendVarToJS('paramsSignal', $params);
 
 ?>
 
 <div class="row row-overflow">
-	<!-- Page d'accueil du plugin -->
+	<!-- Page d accueil du plugin -->
 	<div class="col-xs-12 eqLogicThumbnailDisplay">
 		<legend><i class="fas fa-cog"></i>  {{Gestion}}</legend>
 		<!-- Boutons de gestion du plugin -->
@@ -85,8 +87,8 @@ sendVarToJS('paramsSignal', $params);
 			// Liste des équipements du plugin
 			echo '<div class="eqLogicThumbnailContainer">';
 			foreach ($eqLogics as $eqLogic) {
-            	if($eqLogic->getConfiguration("type") == "groups")
-                	continue;
+				if($eqLogic->getConfiguration("type") == "groups")
+					continue;
 				$opacity = ($eqLogic->getIsEnable()) ? '' : 'disableCard';
 				echo '<div class="eqLogicDisplayCard cursor '.$opacity.'" data-eqLogic_id="' . $eqLogic->getId() . '">';
 				echo '<img src="' . $plugin->getPathImgIcon() . '">';
@@ -102,9 +104,9 @@ sendVarToJS('paramsSignal', $params);
 		?>
 	</div> <!-- /.eqLogicThumbnailDisplay -->
 
-	<!-- Page de présentation de l'équipement -->
+	<!-- Page de présentation de l équipement -->
 	<div class="col-xs-12 eqLogic" style="display: none;">
-		<!-- barre de gestion de l'équipement -->
+		<!-- barre de gestion de l équipement -->
 		<div class="input-group pull-right" style="display:inline-flex;">
 			<span class="input-group-btn">
 				<!-- Les balises <a></a> sont volontairement fermées à la ligne suivante pour éviter les espaces entre les boutons. Ne pas modifier -->
@@ -124,8 +126,8 @@ sendVarToJS('paramsSignal', $params);
 		<div class="tab-content">
 			<!-- Onglet de configuration de léquipement -->
 			<div role="tabpanel" class="tab-pane active" id="eqlogictab">
-				<!-- Partie gauche de l'onglet "Equipements" -->
-				<!-- Paramètres généraux et spécifiques de léquipement -->
+				<!-- Partie gauche de l onglet Equipements -->
+				<!-- Paramètres généraux et spécifiques de l équipement -->
 				<form class="form-horizontal">
 					<fieldset>
 						<div class="col-lg-6">
@@ -181,10 +183,10 @@ sendVarToJS('paramsSignal', $params);
 									<input type="tel" class="eqLogicAttr form-control" data-l1key="configuration" data-l2key="numero" placeholder="{{+336XXXXXXXX}}" pattern="[+]{1}[0-9]{5,14}" />
 								</div>
 							</div>
-                            <?php
-                            if($displayLink  && count($eqLogics) > 0) {
-                                $server  = network::getNetworkAccess('internal', 'ip', '', false); // ip interne de jeedom
-                            	echo '<div class="form-group">';
+							<?php
+							if($displayLink  && count($eqLogics) > 0) {
+								$server  = network::getNetworkAccess('internal', 'ip', '', false); // ip interne de jeedom
+								echo '<div class="form-group">';
 								echo '<label class="col-sm-4 control-label">{{QRcode pour lier votre appareil}}';
 								echo '<sup><i class="fas fa-question-circle tooltips" title="{{Voir documentation, il faut scanner un QRcode depuis votre téléphone}}"></i></sup>';
 								echo '</label>';
@@ -192,7 +194,7 @@ sendVarToJS('paramsSignal', $params);
 								echo '<a href="http://' . $server . ':' .  (($portSignal == "") ? 8099 : $portSignal) .'/v1/qrcodelink?device_name=signal-api'. ($eqLogic->getId()).'" target="_blank"> Associer mon téléphone avec l\'Api</a> ';
 								echo '&nbsp; <i class="fas fa-lg checkNumberLinked" style=" color: grey"></i>';
 								echo '</div>';
-                            	echo '</div>';
+								echo '</div>';
 								echo '<hr/>';
 								echo '<div class="form-group divSignalGroups">';
 								echo '<label class="col-sm-4 control-label">{{Récupérer les groupes}}</label>';
@@ -202,23 +204,21 @@ sendVarToJS('paramsSignal', $params);
 							?>
 
 						</div>
+					</div>
 
 						<!-- Partie droite de longlet Équipement -->
-						<!-- Affiche un champ de commentaire par défaut mais vous pouvez y mettre ce que vous voulez -->
-						<div class="col-lg-6"><!--
-							<legend><i class="fas fa-info"></i> {{Informations}}</legend>
+						<div class="col-lg-6">
+							<legend><i class="fas fa-info"></i> {{Contacts}}</legend>
 							<div class="form-group">
-								<label class="col-sm-4 control-label">{{Description}}</label>
-								<div class="col-sm-6">
-									<textarea class="form-control eqLogicAttr autogrow" data-l1key="comment"></textarea>
-								</div>
-							</div>-->
+                              	<div class="col-sm-1"></div>
+								<div class="col-sm-6"><button class="btn btn-sm btn-primary" id="modalContacts">Afficher/modifier la liste</button></div>
+							</div>
 						</div>
 					</fieldset>
 				</form>
 			</div><!-- /.tabpanel #eqlogictab-->
 
-			<!-- Onglet des commandes de l'équipement -->
+			<!-- Onglet des commandes de l équipement -->
 			<div role="tabpanel" class="tab-pane" id="commandtab">
 				<a class="btn btn-default btn-sm pull-right cmdAction" data-action="add" style="margin-top:5px;"><i class="fas fa-plus-circle"></i> {{Ajouter une commande}}</a>
 				<br><br>
@@ -244,13 +244,13 @@ sendVarToJS('paramsSignal', $params);
 </div><!-- /.row row-overflow -->
 
 <style>
-.getSignalGroups {
-	color: var(--al-primary-color);
-    cursor: auto;
-}
-.getSignalGroups:hover {
-	cursor: pointer;
-}
+	.getSignalGroups {
+		color: var(--al-primary-color);
+		cursor: auto;
+	}
+	.getSignalGroups:hover {
+		cursor: pointer;
+	}
 </style>
 <!-- Inclusion du fichier javascript du plugin (dossier, nom_du_fichier, extension_du_fichier, id_du_plugin) -->
 <?php include_file('desktop', 'signal', 'js', 'signal');?>

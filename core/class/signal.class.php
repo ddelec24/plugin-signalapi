@@ -21,7 +21,7 @@ require_once __DIR__  . '/../../../../core/php/core.inc.php';
 class signal extends eqLogic {
 
 	/*     * *************************Attributs****************************** */
-	
+
 	/*     * *********************Méthodes d'instance************************* */
 
 	public static function deamon_info() {
@@ -109,6 +109,29 @@ class signal extends eqLogic {
 		system::fuserk(config::byKey('socketport', __CLASS__));
 	}
 
+    /*
+    * Fonction exécutée automatiquement tous les jours par Jeedom */
+    public static function cronDaily() { //cron5 for tests
+      	$jsonrpcState = config::byKey('jsonrpc', __CLASS__);
+      	$listenNumber = config::byKey('listenNumber', __CLASS__);
+
+      	$eqLogics = eqLogic::byType('signal'); // on récup les numéros enregistrés
+		foreach($eqLogics as $eqLogic) {
+          $type = $eqLogic->getConfiguration("type");
+          $currentnumber = $eqLogic->getConfiguration(null, 'numero');
+          if($type != 'groups' && $eqLogic->getIsEnable()) {
+            // Il faut impérativement avoir une réception tous les 35 jours maximum sinon l'autorisation API expire.
+            // Réception journalière des équipements actifs qui ne sont pas en réception automatique (mode RPC)
+            if($listenNumber != $currentnumber['numero'] || $jsonrpcState != 1)
+          		$eqLogic->normalReceive();
+          }
+        }
+    }
+    
+  public static function backupExclude() {
+  	return ["data/signal-cli-config/attachments"];  
+  }
+  
 	// Fonction exécutée automatiquement après la sauvegarde (création ou mise à jour) de l'équipement
 	public function postSave() {
 		$info = $this->getCmd(null, 'received');
@@ -209,11 +232,26 @@ class signal extends eqLogic {
 		$cmd->setIsVisible(0);
 		$cmd->setDisplay('forceReturnLineBefore', true);
 		$cmd->save();
+      
+      	$this->syncContacts();
+      
+      	$jsonrpcState = config::byKey('jsonrpc', __CLASS__);
+      		
+      	if($jsonrpcState != 1 && $this->getConfiguration("type") != "groups")
+      		$this->normalReceive();
+      
 	}
 
 	// Fonction exécutée automatiquement avant la suppression de l'équipement
 	public function preRemove() {
       	$number = $this->getConfiguration('numero');
+      	$plugin = plugin::byId('signal');
+      	if(config::byKey('jsonrpc', __CLASS__)) {
+         	log::add('signal', 'warning', 'Impossible de supprimer le numéro car la réception en temps réelle est active, merci de le désactiver dans la configuration du plugin pour pouvoir supprimer cet équipement');
+          	throw new Exception(__('Impossible de supprimer le numéro car la réception en temps réelle est active, merci de le désactiver dans la configuration du plugin pour pouvoir supprimer cet équipement.', __FILE__));
+          	return false;
+        }
+      
       	if(!empty($number)) {
           self::removeLocalDevice();
           // Delete associated groups
@@ -247,6 +285,9 @@ class signal extends eqLogic {
 		log::add('signal', 'debug', "[send Options] " . json_encode($options));
 		$port = config::byKey('port', 'signal');
 		$message = trim($options['message']);
+      	// nettoyage des caractères qui passent mal
+		$message = str_replace('"', '\"', $message);
+		$message = str_replace("'", "’", $message);
 		$message = preg_replace("/\r\n|\r|\n/", '\\r\\n', $message);
 		
 		
@@ -263,31 +304,157 @@ class signal extends eqLogic {
 
 	}
 
-  	//{"error":"This functionality is only available in normal/native mode!"}
   	public function removeLocalDevice() {
-		log::add('signal', 'debug', "[send removeLocalDevice] ");
 		$port = config::byKey('port', 'signal');
 		$sender = trim($this->getConfiguration("numero"));
 
 		$curl = 'curl -X POST -H "Content-Type: application/json" \'http://localhost:' . 
 				$port . '/v1/unregister/' . $sender . '\' -d \'{"delete_account": false, "delete_local_data": true}\''; // ATTENTION SURTOUT PAS delete_account à true, ça supprime des serveurs signal aussi
 		
-		log::add('signal', 'debug', '[ENVOI MESSAGE] Requête:<br/>' . $curl);
+		log::add('signal', 'debug', '[REMOVE NUMBER] Requête:<br/>' . $curl);
 		$send = shell_exec($curl);
-		log::add('signal', 'debug', '[RETOUR MESSAGE] ' . $send);
-
 	}
 	
+  	public function syncContacts() {
+		$port = config::byKey('port', 'signal');
+		$sender = trim($this->getConfiguration("numero"));
+
+		$curl = 'curl -X GET -H "Content-Type: application/json" \'http://localhost:' . 
+				$port . '/v1/identities/' . $sender . '\''; // récupère les contacts signal
+		log::add('signal', 'debug', '[GET CONTACTS] Requête:<br/>' . $curl);
+		$contacts = shell_exec($curl);
+      	if(strlen($contacts) > 5) { // on a reçu quelquechose
+          $arrContacts = json_decode($contacts);
+          
+          if(isset($arrContacts) && is_array($arrContacts)) {
+            $savedContactList = $this->getConfiguration("contactsList");
+            if(empty($savedContactList))
+              $savedContactList = array();
+
+            foreach($arrContacts as $contact) {
+              if($contact->number == $sender || empty($contact->number)) // évite dajouter son propre numéro ou un vide
+                continue;
+              
+              if(in_array($contact->number, array_column($savedContactList, "number"))) // on l'a déjà synchro
+                continue;
+              
+              $newContact = ["number" => $contact->number, "name" => "", "display" => false];
+              log::add('signal', 'debug', '[GET CONTACTS] Sauvegarde contact: ' . json_encode($newContact));
+              $savedContactList[] = $newContact;
+            }
+            //log::add('signal', 'debug', '[GET CONTACTS] Liste actuelle: ' . gettype($savedContactList) . "/" . json_encode($savedContactList));
+            
+            $this->setConfiguration('contactsList', $savedContactList);
+            $this->save(true); // force enregistrement car on est dans le postSave()
+          }
+        }
+	}
+	
+    public function normalReceive() {
+
+		$port = config::byKey('port', 'signal');
+		$receive = trim($this->getConfiguration("numero"));
+
+      	$curl = 'curl -X GET -H "Content-Type: application/json" \'http://localhost:' . 
+          		$port . '/v1/receive/' . $receive . '\'';
+
+		
+		log::add('signal', 'debug', '[RECEIVE] Requête: ' . $curl);
+		$curlret = shell_exec($curl);
+		log::add('signal', 'debug', '[RETOUR RECEIVE] ' . $curlret);
+      
+      	if(strlen($curlret) > 5) { // on a reçu quelquechose depuis la dernière fois
+          $arrayMsg = json_decode($curlret);
+
+          if(isset($arrayMsg) && is_array($arrayMsg)) {
+              $nbNewMsgs = 		sizeof($arrayMsg);
+              $received = 		$arrayMsg[$nbNewMsgs - 1]; // get last message
+              
+              $sourceNumber = 	$received->envelope->sourceNumber;
+              $sourceName = 	$received->envelope->sourceName;
+              $timestamp = 		$received->envelope->timestamp;
+              // suivant is on envoi à nous meme ou non c'est pas la même key dans le json
+              $msg = 				(!empty($received->envelope->dataMessage->message)) ? $received->envelope->dataMessage->message : $received->envelope->syncMessage->sentMessage->message; 
+              $recipientNumber = 	$received->account;
+              $isGroupMessage = 	(!empty($received->envelope->syncMessage->sentMessage->groupInfo) || !empty($received->envelope->dataMessage->groupInfo)) ? true : false;
+
+              if(!is_object($received->exception) && $msg != "" && !$isGroupMessage) {
+               	  $eqLogics = eqLogic::byType('signal');
+                  foreach($eqLogics as $eqLogic) {
+                      $eqNumero = $eqLogic->getConfiguration(null, 'numero');
+                      if($eqNumero['numero'] == $recipientNumber && $msg !== "") { // si présence message et qu'on est sur le numéro destinataire on historique le message
+                          log::add('signal', 'debug', '[RECEIVE] Message entrant, numéro '  . $eqNumero['numero'] . " : " . nl2br($msg));
+                          $cmd = $eqLogic->getCmd(null, 'received');
+                          $cmdRaw = $eqLogic->getCmd(null, 'receivedRaw');
+                          $cmdSourceName = $eqLogic->getCmd(null, 'sourceName');
+                          $cmdSourceNumber = $eqLogic->getCmd(null, 'sourceNumber');
+                          $oldReceivedMsg = $cmd->execCmd();
+
+                          if($oldReceivedMsg == $msg ) { // on force un event intemédiaire pour prise en compte d'un message identique
+                              $cmd->event(" ", null);
+                              $cmdRaw->event(" ", null);
+                              $cmdSourceName->event(" ", null);
+                              $cmdSourceNumber->event(" ", null);
+                          }
+                          $msg = htmlentities($msg);
+                          $msg = preg_replace("/\\r\\n/u", "\n", $msg);
+                          if(strlen($msg) > 115) {
+                            $msg = substr($msg, 0, 115) . "...";
+                          }
+                          $cmd->event($msg, null);
+                          $cmdSourceNumber->event($sourceNumber, null);
+
+                          if($sourceName != "")
+                              $cmdSourceName->event($sourceName, null);
+
+                          // les commandes sont limitées à 255chars dans la BDD, impossible de stocker le json entier donc je prends que quelques éléments
+                          $moreDatas = Array('sourceNumber' => $sourceNumber, 'sourceName' => $sourceName, 'timestamp' => $timestamp);
+                          $cmdRaw->event(json_encode($moreDatas), null);
+                          break;
+                      }
+                  } // fin foreach
+              } // msg non vide
+          } // fin isset 
+        }
+    }
+  
 	public function sendFile($options) {
+      	/*
+        //
+        // A PARTIR DE l'API 0.65, possibilité de customiser le nom du filename, code:
+        // https://github.com/bbernhard/signal-cli-rest-api/blob/master/src/api/api.go#L99
+        //
+        // api.SendMessageV2{
+		//	base64_attachments	[
+				example: List [ "<BASE64 ENCODED DATA>", "data:<MIME-TYPE>;base64<comma><BASE64 ENCODED DATA>", "data:<MIME-TYPE>;filename=<FILENAME>;base64<comma><BASE64 ENCODED DATA>" ]
+        //  ]
+        
+        */
 		log::add('signal', 'debug', "[sendFile Options] " . json_encode($options));
 		$port = config::byKey('port', 'signal');
-		
-		if ((isset($options['file'])) && ($options['file'] == ""))
-			$options['file'] = 'error';
-		if (!(isset($options['file'])))
-			$options['file'] = "";
+            
+      	if(!(isset($options['file'])) && !(isset($options['files']))) {
+			$file = "";
+        } else {
+          if(isset($options['file'])) {
+          	if($options['file'] == "") {
+              $file = 'error';
+            } else {
+              $file = $options['file'];
+            }
+          } elseif(isset($options['files'])) {
+          	if(sizeof($options['files']) == 0) {
+              $file = 'error';
+            } else {
+                $file = $options['files'][0]; // 1 seule pièce jointe, à voir si possibilité de multiples fichiers dans le futur
+            }
+          } else {
+            $file = 'error';
+          }
+        }
 
-        $attachement = $options['file'];
+        $attachement = $file;
+      	log::add('signal', 'debug', 'file: '. $attachement);
         $message = trim($options['message']);
       
       	if($attachement == 'error') { // quand on passe une commande et qu'elle est en erreur
@@ -299,6 +466,7 @@ class signal extends eqLogic {
 		$tmpFolder = jeedom::getTmpFolder('signal');
       	// si c'est une url il faut pas récupérer les éventuels arguments pour le nom du fichier
 		$filename = (substr($attachement, 0, 4) == 'http') ? basename(parse_url($attachement)['path']) : basename($attachement); 
+      	log::add('signal', 'debug', 'chemin du fichier: '. $filename);
 		$contentFile = @file_get_contents($attachement);
       
       	if(!$contentFile || strlen($contentFile) == 0) {
@@ -309,8 +477,9 @@ class signal extends eqLogic {
       	$writeFile = file_put_contents($tmpFolder . "/" . $filename, $contentFile);
 		log::add('signal', 'debug', 'écriture fichier '. $tmpFolder. "/" . $filename . " => " . round($writeFile/1024/1024, 2) . 'Mo');
       	// nettoyage des caractères qui passent mal
-		$cleanedMessage = str_replace('"', '\"', $message);
-		$cleanedMessage = str_replace("'", "’", $cleanedMessage);
+      	$cleanedMessage = str_replace("'", "’", $message);
+		$cleanedMessage = str_replace('"', '\\\\\\"', $cleanedMessage);
+		
       	//log::add('signal', 'debug', "message : " . $cleanedMessage);
 		$cleanedMessage = preg_replace("/\r\n|\r|\n/", "\\r\\n", $cleanedMessage);
       	//log::add('signal', 'debug', "message2 : " . $cleanedMessage);
@@ -318,8 +487,8 @@ class signal extends eqLogic {
 		$sender = trim($this->getConfiguration("numero"));
 		$recipient = isset($options['number']) ? trim($options['number']) : $sender;
 
-		$curl = 'CLEANEDMSG="'.$cleanedMessage.'" && B64TEMPFILE="$(' . system::getCmdSudo() . 'base64 ' . $tmpFolder . "/" . $filename .')" ' . //on met le fichier en b64 dans une variable
-          		'&& printf \'{"message": "%s", "base64_attachments": ["\'"$B64TEMPFILE"\'"], "number": "' . $sender . '", "recipients": [ "' . $recipient . '" ]}\' "${CLEANEDMSG}" | ' . // on prépare le json à envoyer à l'api
+		$curl = 'B64TEMPFILE="$(' . system::getCmdSudo() . 'base64 ' . $tmpFolder . "/" . $filename .')" ' . //on met le fichier en b64 dans une variable
+          		'&& printf \'{"message": "%s", "base64_attachments": ["\'"$B64TEMPFILE"\'"], "number": "' . $sender . '", "recipients": [ "' . $recipient . '" ]}\' "' . $cleanedMessage . '" | ' . // on prépare le json à envoyer à l'api
 				'curl -X POST -H "Content-Type: application/json" -d @- \'http://localhost:' . $port . '/v2/send\''; // envoi du pipe à l'api
 
 		log::add('signal', 'debug', '[ENVOI MESSAGE] Requête:<br/>' . $curl);
@@ -333,66 +502,97 @@ class signal extends eqLogic {
 class signalCmd extends cmd {
 
 	// Exécution d'une commande
-	public function execute($_options = array()) {
+    public function execute($_options = array()) {
 
-		if ($this->getType() != 'action') {
-			return;
-		}
-		
-			$eqLogic = $this->getEqLogic(); // Récupération de l’eqlogic
+        if ($this->getType() != 'action')
+            return;
 
-			switch ($this->getLogicalId()) {
-				case 'sendMessage':
-				$eqLogic->send($_options);
-				break;
-				case 'sendFile':
-				$eqLogic->sendFile($_options);
-				break;
-				default:
-				throw new Error('This should not append!');
-				log::add('signal', 'warning', 'Error while executing cmd ' . $this->getLogicalId());
-				break;
-			}
-		}
+        $options = array();
+
+        if (isset($_options['file']))
+            $options = arg2array($_options['file']);
+
+        if (isset($options['rtspVideo'])) {
+            $save = '/tmp/signal_' . $this->getId() . '.mp4';
+            unlink($save);
+            $cmd = 'ffmpeg -rtsp_transport tcp -loglevel fatal -i "' . $options['rtspVideo'] . '" -c:v copy -bsf:a aac_adtstoasc -y -t 10 -movflags faststart ' . $save;
+            shell_exec($cmd);
+            unset($_options['file']);
+            $_options['files'][] = $save;
+        }
+
+        $eqLogic = $this->getEqLogic(); // Récupération de l’eqlogic
+
+        switch ($this->getLogicalId()) {
+            case 'sendMessage':
+            $eqLogic->send($_options);
+            break;
+            case 'sendFile':
+            $eqLogic->sendFile($_options);
+            break;
+            default:
+            throw new Error('This should not append!');
+            log::add('signal', 'warning', 'Error while executing cmd ' . $this->getLogicalId());
+            break;
+        }
+    }
 
 
-		public function getWidgetTemplateCode($_version = 'dashboard', $_clean = true, $_widgetName = '') {
-			$data = null;
-			if ($_version != 'scenario') 
-				return parent::getWidgetTemplateCode($_version, $_clean, $_widgetName);
-			if ($this->getConfiguration('type') == 'sendWithAttachements')
-				$data = getTemplate('core', 'scenario', 'cmd.sendWithAttachements', 'signal');
-			if ($this->getConfiguration('type') == 'send')
-				$data = getTemplate('core', 'scenario', 'cmd.send', 'signal');
+    public function getWidgetTemplateCode($_version = 'dashboard', $_clean = true, $_widgetName = '') {
+        $data = null;
+        if ($_version != 'scenario') 
+            return parent::getWidgetTemplateCode($_version, $_clean, $_widgetName);
+        if ($this->getConfiguration('type') == 'sendWithAttachements')
+            $data = getTemplate('core', 'scenario', 'cmd.sendWithAttachements', 'signal');
+        if ($this->getConfiguration('type') == 'send')
+            $data = getTemplate('core', 'scenario', 'cmd.send', 'signal');
 
-			if (!is_null($data)) {
-			$eqLogics = eqLogic::byType('signal'); // on récup les numéros enregistrés
-			$optionsNumbers = "";
+        if (!is_null($data)) {
+            $eqLogics = eqLogic::byType('signal'); // on récup les numéros enregistrés
+            $optionsNumbers = "";
             $optionsGroups = "";
-			foreach($eqLogics as $eqLogic) {
-				if($eqLogic->getIsEnable()) { // que les actifs
-					$number = $eqLogic->getConfiguration(null, 'numero');
-                  	$group = $eqLogic->getConfiguration(null, 'id');
-                  	if(!empty($number['numero']))
-						$optionsNumbers .= '<option value="' . $number['numero'] . '">' . $number['numero'] . ' ( ' . $eqLogic->getName() . ' )</option>';
-                  	if(!empty($group['id']))
-                      	$optionsGroups .= '<option value="' . $group['id'] . '">' . $eqLogic->getName() . '</option>';
-				}
-			}
+          	$optionsContacts = "";
+            foreach($eqLogics as $eqLogic) {
+                if($eqLogic->getIsEnable()) { // que les actifs
+                    $number = $eqLogic->getConfiguration(null, 'numero');
+                    $group = $eqLogic->getConfiguration(null, 'id');
+                  	$contacts = $eqLogic->getConfiguration('contactsList');
+                  
+                    if(!empty($number['numero']))
+                        $optionsNumbers .= '<option value="' . $number['numero'] . '">' . $number['numero'] . ' ( ' . $eqLogic->getName() . ' )</option>';
+                  
+                    if(!empty($group['id']))
+                        $optionsGroups .= '<option value="' . $group['id'] . '">' . $eqLogic->getName() . '</option>';
+                  
+                  	if(!empty($contacts)) {
+                      	// on filtre pour avoir que ceux à afficher
+                      	$contacts = array_filter($contacts, function($k) {
+                            return $k['display'] === true;
+                          });
+                      	foreach($contacts as $contact) {  	                          
+                      		$optionsContacts .= '<option value="' . $contact['number'] .'">' . $contact['number'] . ' ( ' . $contact['name'] . ' )</options>';
+                        }
+                      }
+                  	
+                }
+            }
 
-			if(empty($optionsNumbers))
-				$optionsNumbers = '<option value="">Aucun équipement détecté</option>';
-              
+            if(empty($optionsNumbers))
+                $optionsNumbers = '<option value="">Aucun équipement détecté</option>';
+
             if(!empty($optionsGroups))
-              $optionsNumbers = $optionsNumbers . '<optgroup label="Groupes">' . $optionsGroups . '</optgroup';
-              
-			$data = str_replace("#possibleNumbers#", $optionsNumbers, $data);
-			if (version_compare(jeedom::version(),'4.2.0','>=')) {
-				if(!is_array($data)) return array('template' => $data, 'isCoreWidget' => false);
-			} else return $data;
-		}
-		return parent::getWidgetTemplateCode($_version, $_clean, $_widgetName);
-	}
+                $optionsNumbers .= '<optgroup label="Groupes">' . $optionsGroups . '</optgroup>';
+          
+          	if(!empty($optionsContacts))
+              	$optionsNumbers .= '<optgroup label="Contacts">' . $optionsContacts . '</optgroup>';
+
+            $data = str_replace("#possibleNumbers#", $optionsNumbers, $data);
+            if (version_compare(jeedom::version(),'4.2.0','>=')) {
+                if(!is_array($data)) return array('template' => $data, 'isCoreWidget' => false);
+            } else return $data;
+        }
+        return parent::getWidgetTemplateCode($_version, $_clean, $_widgetName);
+    }
 	/*     * **********************Getteur Setteur*************************** */
 
 }

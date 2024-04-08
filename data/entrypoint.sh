@@ -1,27 +1,26 @@
 #!/bin/sh
 
 set -x
-set -e
 
 [ -z "${SIGNAL_CLI_CONFIG_DIR}" ] && echo "SIGNAL_CLI_CONFIG_DIR environmental variable needs to be set! Aborting!" && exit 1;
 
-# jeedom fix
-exists=$(grep -c '^www-data:' /etc/passwd)
-if [ ${exists} -eq 1 ];
+# jeedom fix, we need to use 33 uuid/guid, then delete www-data if exists
+exists=$(grep -c "www-data" /etc/passwd)
+echo ">>> Check if www-data exists : ${exists}"
+if [ "${exists}" -eq 1 ];
 then
-        userdel www-data
+	userdel www-data
 fi;
 
-usermod -u ${SIGNAL_CLI_UID} signal-api
-groupmod -g ${SIGNAL_CLI_GID} signal-api
+echo ">>> Creating user signal-api"
+usermod -u "${SIGNAL_CLI_UID}" signal-api
+groupmod -g "${SIGNAL_CLI_GID}" signal-api
 
+set -e
 
 # Fix permissions to ensure backward compatibility
+echo ">>> Update signal-api UID/GID"
 chown ${SIGNAL_CLI_UID}:${SIGNAL_CLI_GID} -R ${SIGNAL_CLI_CONFIG_DIR}
-
-# Commandes spéciales jeedom, car il remet les droits à www-data à chaque backup
-# chown www-data:www-data -R ${SIGNAL_CLI_CONFIG_DIR}
-# usermod -a -G www-data signal-api
 
 # Show warning on docker exec
 cat <<EOF >> /root/.bashrc
