@@ -30,7 +30,7 @@ class signal extends eqLogic {
 		$return['state'] = 'nok';
 		$pid_file = jeedom::getTmpFolder(__CLASS__) . '/deamon.pid';
 		if (file_exists($pid_file)) {
-			if (@posix_getsid(trim(file_get_contents($pid_file)))) {
+			if (@posix_getsid((int)trim(file_get_contents($pid_file)))) {
 				$return['state'] = 'ok';
 			} else {
 				shell_exec(system::getCmdSudo() . 'rm -rf ' . $pid_file . ' 2>&1 > /dev/null');
