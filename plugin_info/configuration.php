@@ -167,7 +167,9 @@ $isDockerRunning = trim(shell_exec(system::getCmdSudo() . ' pidof dockerd'));
 					});
 					return;
 				} else {
-					window.toastr.clear()
+					if (window.toastr && typeof window.toastr.clear === "function") {
+						window.toastr.clear()
+					}
 					$('.pluginDisplayCard[data-plugin_id=' + $('#span_plugin_id').text() + ']').click();
 					var infoDeamon = $('.configKey[data-l1key=jsonrpc]').is(':checked') ? "{{Merci de patienter, le démon devrait démarrer sous peu.}}" : "{{Le démon n'a pas besoin de démarrer. Tout est opérationnel.}}";
 					$('#div_alert').showAlert({
