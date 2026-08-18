@@ -294,9 +294,14 @@ class signal extends eqLogic {
 		$sender = trim($this->getConfiguration("numero"));
 		$recipient = isset($options['number']) ? trim($options['number']) : $sender;
       
-		$curl = 'curl -X POST -H "Content-Type: application/json" \'http://localhost:' . 
+		// "styled" demande à l'API d'interpréter le balisage du message : **gras**, *italique*,
+      	// `monospace`, ||spoiler||. Défaut "normal", donc aucun changement pour les envois existants.
+      	// Liste blanche : $options vient d'un scénario et finit interpolé dans une commande shell.
+		$textMode = (isset($options['text_mode']) && $options['text_mode'] === 'styled') ? 'styled' : 'normal';
+
+		$curl = 'curl -X POST -H "Content-Type: application/json" \'http://localhost:' .
 				$port . '/v2/send\' -d \'{"message": "' .
-				$message . '", "number": "' . $sender . '", "recipients": [ "' . $recipient . '" ]}\'';
+				$message . '", "number": "' . $sender . '", "recipients": [ "' . $recipient . '" ], "text_mode": "' . $textMode . '"}\'';
 		
 		log::add('signal', 'debug', '[ENVOI MESSAGE] Requête:<br/>' . $curl);
 		$send = shell_exec($curl);
@@ -487,8 +492,12 @@ class signal extends eqLogic {
 		$sender = trim($this->getConfiguration("numero"));
 		$recipient = isset($options['number']) ? trim($options['number']) : $sender;
 
+		// Même option que dans send(), sans quoi le balisage fonctionnerait sur un message seul et
+      	// disparaîtrait dès qu'on y joint un fichier.
+		$textMode = (isset($options['text_mode']) && $options['text_mode'] === 'styled') ? 'styled' : 'normal';
+		
 		$curl = 'B64TEMPFILE="$(' . system::getCmdSudo() . 'base64 ' . $tmpFolder . "/" . $filename .')" ' . //on met le fichier en b64 dans une variable
-          		'&& printf \'{"message": "%s", "base64_attachments": ["\'"$B64TEMPFILE"\'"], "number": "' . $sender . '", "recipients": [ "' . $recipient . '" ]}\' "' . $cleanedMessage . '" | ' . // on prépare le json à envoyer à l'api
+          		'&& printf \'{"message": "%s", "base64_attachments": ["\'"$B64TEMPFILE"\'"], "number": "' . $sender . '", "recipients": [ "' . $recipient . '" ], "text_mode": "' . $textMode . '"}\' "' . $cleanedMessage . '" | ' . // on prépare le json à envoyer à l'api
 				'curl -X POST -H "Content-Type: application/json" -d @- \'http://localhost:' . $port . '/v2/send\''; // envoi du pipe à l'api
 
 		log::add('signal', 'debug', '[ENVOI MESSAGE] Requête:<br/>' . $curl);
